@@ -365,6 +365,7 @@ body.is-mining .orbit-particle, body.is-done .orbit-particle {
   font-size: 13.5px;
 }
 .wallet-note { margin: 10px 0 0; font-size: 13px; color: var(--emerald-bright); font-weight: 600; }
+.app-version { margin: 18px 0 4px; text-align: center; font-size: 11px; color: var(--tg-hint); }
 .wallet-badge { color: var(--emerald-bright); font-weight: 700; white-space: nowrap; }
 .wallet-fee { margin: 0 0 10px; font-size: 12.5px; color: var(--tg-hint); line-height: 1.45; }
 .btn-verify {

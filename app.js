@@ -975,6 +975,10 @@
     return;
   }
   state = stateFromPayload(payload);
+  var verEl = document.getElementById("appVersion");
+  if (verEl) {
+    verEl.textContent = "GEM Mining v7 • mode " + (API_BASE ? "API" : "CHAT");
+  }
   showScreen("app");
   render();
   startTicker();
