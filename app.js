@@ -966,6 +966,31 @@
     }
   });
 
+  $("btnCopyCa").addEventListener("click", function () {
+    var input = $("caText");
+    function done() {
+      $("copyCaOk").classList.remove("hidden");
+      haptic("success");
+      setTimeout(function () { $("copyCaOk").classList.add("hidden"); }, 2500);
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(input.value).then(done, function () {
+        input.select();
+        document.execCommand("copy");
+        done();
+      });
+    } else {
+      input.select();
+      document.execCommand("copy");
+      done();
+    }
+  });
+
+  $("btnBuyStonfi").addEventListener("click", function () {
+    haptic("tap");
+    openExternal("https://app.ston.fi/swap?ft=TON&tt=EQAV2pGBOzyVaSagkbrc5otgPQCuUD2VYmmBXXPOo2u9Nzvv");
+  });
+
   $("btnCopy").addEventListener("click", function () {
     var input = $("refLink");
     function done() {
@@ -1021,7 +1046,7 @@
     var verEl = document.getElementById("appVersion");
     if (!verEl) return;
     var prev = readDiag();
-    verEl.textContent = "GEM Mining v17 • mode "
+    verEl.textContent = "GEM Mining v18 • mode "
       + (apiAvailable() ? "API" : ("OFFLINE (" + apiWhy() + ")"))
       + (prev ? " • prev: " + prev : "");
   }
