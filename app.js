@@ -638,6 +638,12 @@
 
   function openExternal(url) {
     try {
+      // Telegram links must open INSIDE Telegram (openTelegramLink) —
+      // openLink sends t.me URLs to the browser and kicks the user out
+      // of the app. Non-Telegram links (STON.fi etc.) keep openLink.
+      if (tg && /t\.me\//.test(url) && typeof tg.openTelegramLink === "function") {
+        tg.openTelegramLink(url); return;
+      }
       if (tg && typeof tg.openLink === "function") { tg.openLink(url); return; }
     } catch (e) { /* fall through */ }
     window.open(url, "_blank");
@@ -1125,7 +1131,7 @@
     var verEl = document.getElementById("appVersion");
     if (!verEl) return;
     var prev = readDiag();
-    verEl.textContent = "GEM Mining v25 • mode "
+    verEl.textContent = "GEM Mining v26 • mode "
       + (apiAvailable() ? "API" : ("OFFLINE (" + apiWhy() + ")"))
       + (prev ? " • prev: " + prev : "");
   }
