@@ -97,6 +97,8 @@
     return {
       user: { id: p.uid, first_name: p.name || "Miner" },
       balance: Number(p.balance) || 0,
+      wallet: p.wallet ? String(p.wallet) : null,
+      tasks: Array.isArray(p.tasks) ? p.tasks : [],
       session: session,
       referral: {
         link: p.referral && p.referral.link ? p.referral.link : null,
@@ -124,6 +126,9 @@
       $("userChip").textContent = "Halo, " + state.user.first_name + " 👋";
     }
 
+    renderWallet();
+    renderTasks();
+
     // Mining tab: three mutually exclusive states.
     $("miningIdle").classList.toggle("hidden", !!s);
     $("miningRunning").classList.toggle("hidden", !s || s.claimable);
@@ -132,7 +137,7 @@
     document.body.classList.toggle("is-done", !!s && s.claimable);
 
     if (s && s.claimable) {
-      $("doneAmount").textContent = fmtPoints(s.accrued) + " poin";
+      $("doneAmount").textContent = fmtPoints(s.accrued) + " GEM";
       $("claimAmount").textContent = fmtPoints(s.accrued);
       setRing(1);
     } else if (s) {
@@ -151,7 +156,7 @@
       $("refNoLink").classList.remove("hidden");
     }
     $("refInvited").textContent = state.referral ? state.referral.invited : 0;
-    $("refEarnings").textContent = fmtPoints(state.referral ? state.referral.earnings : 0) + " poin";
+    $("refEarnings").textContent = fmtPoints(state.referral ? state.referral.earnings : 0) + " GEM";
 
     // Leaderboard tab.
     var list = $("boardList");
@@ -175,7 +180,7 @@
       name.textContent = row.name + (row.is_you ? " (kamu)" : "");
       var pts = document.createElement("span");
       pts.className = "pts";
-      pts.textContent = fmtPoints(row.balance) + " poin";
+      pts.textContent = fmtPoints(row.balance) + " GEM";
       li.appendChild(rank);
       li.appendChild(name);
       li.appendChild(pts);
@@ -223,10 +228,10 @@
     setRing(frac);
     $("progressBar").style.width = (frac * 100).toFixed(1) + "%";
     $("progressPct").textContent = Math.floor(frac * 100) + "%";
-    $("statAccrued").textContent = fmtPoints(accrued) + " poin";
+    $("statAccrued").textContent = fmtPoints(accrued) + " GEM";
     $("statElapsed").textContent = fmtDuration(elapsed);
     $("statRemaining").textContent = fmtDuration(s.end_ts - now);
-    $("statTarget").textContent = fmtPoints(s.full_amount) + " poin";
+    $("statTarget").textContent = fmtPoints(s.full_amount) + " GEM";
   }
 
   function startTicker() {
@@ -244,20 +249,142 @@
     setTimeout(function () { el.classList.add("hidden"); }, 6000);
   }
 
+  /* ---------------- wallet card ---------------- */
+  function shortAddr(a) {
+    if (!a) return "";
+    return a.length > 14 ? a.slice(0, 6) + "…" + a.slice(-4) : a;
+  }
+
+  function walletNote(msg) {
+    var el = $("walletNote");
+    if (!el) return;
+    el.textContent = msg;
+    el.classList.remove("hidden");
+    setTimeout(function () { el.classList.add("hidden"); }, 6000);
+  }
+
+  function renderWallet() {
+    var on = !!state.wallet;
+    $("walletOff").classList.toggle("hidden", on);
+    $("walletOn").classList.toggle("hidden", !on);
+    if (on) $("walletAddr").textContent = shortAddr(state.wallet);
+  }
+
+  /* ---------------- tasks ---------------- */
+  var TASK_ICONS = {
+    wallet_connect: "🔗",
+    first_claim: "⛏️",
+    referral_1: "👥",
+    join_channel: "📣",
+    follow_x: "🐦"
+  };
+
+  function renderTasks() {
+    var list = $("taskList");
+    if (!list) return;
+    list.innerHTML = "";
+    var tasks = state.tasks || [];
+    if (!tasks.length) {
+      var empty = document.createElement("p");
+      empty.className = "muted";
+      empty.textContent = "Belum ada tugas saat ini. Cek lagi nanti ya. 💎";
+      list.appendChild(empty);
+      return;
+    }
+    tasks.forEach(function (t) {
+      var card = document.createElement("div");
+      card.className = "task-card" + (t.state === "locked" ? " locked" : "")
+        + (t.state === "claimed" ? " claimed" : "");
+
+      var icon = document.createElement("span");
+      icon.className = "task-icon";
+      icon.textContent = TASK_ICONS[t.id] || "📋";
+
+      var main = document.createElement("div");
+      main.className = "task-main";
+      var title = document.createElement("div");
+      title.className = "task-title";
+      title.textContent = t.title;
+      var desc = document.createElement("div");
+      desc.className = "task-desc";
+      desc.textContent = t.desc;
+      var chip = document.createElement("span");
+      chip.className = "task-reward";
+      chip.textContent = "+" + fmtPoints(t.reward) + " GEM";
+      main.appendChild(title);
+      main.appendChild(desc);
+      main.appendChild(chip);
+
+      var actions = document.createElement("div");
+      actions.className = "task-actions";
+      if (t.state === "claimed") {
+        var done = document.createElement("span");
+        done.className = "task-state done";
+        done.textContent = "✅ Selesai";
+        actions.appendChild(done);
+      } else if (t.state === "ready") {
+        if (t.url) {
+          var open = document.createElement("button");
+          open.className = "btn btn-task-open";
+          open.textContent = "Buka";
+          open.addEventListener("click", function () {
+            haptic("tap");
+            openExternal(t.url);
+          });
+          actions.appendChild(open);
+        }
+        var claim = document.createElement("button");
+        claim.className = "btn btn-task";
+        claim.textContent = "Klaim +" + fmtPoints(t.reward);
+        claim.addEventListener("click", function () {
+          haptic("tap");
+          if (!sendAndClose({ action: "task", task_id: t.id })) fallbackHint();
+        });
+        actions.appendChild(claim);
+      } else {
+        var lock = document.createElement("span");
+        lock.className = "task-state locked";
+        lock.textContent = "🔒 Belum terpenuhi";
+        actions.appendChild(lock);
+      }
+
+      card.appendChild(icon);
+      card.appendChild(main);
+      card.appendChild(actions);
+      list.appendChild(card);
+    });
+  }
+
+  function openExternal(url) {
+    try {
+      if (tg && typeof tg.openLink === "function") { tg.openLink(url); return; }
+    } catch (e) { /* fall through */ }
+    window.open(url, "_blank");
+  }
+
   /* ---------------- actions: sendData back to the bot ------------------ */
-  function sendAction(action) {
-    // sendData only exists for web apps opened from a reply-keyboard
-    // button; anywhere else it throws or is missing -> caller shows a hint.
+  // sendData only exists for web apps opened from a reply-keyboard
+  // button; anywhere else it throws or is missing -> caller shows a hint.
+  function sendDataOnly(obj) {
     if (!tg || typeof tg.sendData !== "function") return false;
     try {
-      tg.sendData(JSON.stringify({ action: action }));
+      tg.sendData(JSON.stringify(obj));
     } catch (e) {
       return false;
     }
+    return true;
+  }
+
+  function sendAndClose(obj) {
+    if (!sendDataOnly(obj)) return false;
     // Give Telegram a beat to deliver the data, then close the app;
     // the bot posts the result (and a fresh keyboard) into the chat.
     setTimeout(function () { try { tg.close(); } catch (e) {} }, 200);
     return true;
+  }
+
+  function sendAction(action) {
+    return sendAndClose({ action: action });
   }
 
   function fallbackHint() {
@@ -273,6 +400,93 @@
   $("btnClaim").addEventListener("click", function () {
     haptic("tap");
     if (!sendAction("claim")) fallbackHint();
+  });
+
+  /* ---------------- TonConnect (wallet) ----------------
+   * Headless SDK use: we render our own buttons and only borrow the
+   * SDK's modal + connection state. The SDK bundle exposes
+   * TON_CONNECT_UI.toUserFriendlyAddress(raw, testnet) — verified
+   * against the actual @tonconnect/ui dist — so the raw "0:..." address
+   * from wallet.account is converted here (chain "-3" = testnet,
+   * "-239" = mainnet); if the helper is ever missing we fall back to
+   * the raw form, which bot.py also accepts and stores as-is. */
+  var tcUI = null;
+
+  function getTonConnectUI() {
+    if (tcUI) return tcUI;
+    if (typeof window.TON_CONNECT_UI === "undefined"
+        || !window.TON_CONNECT_UI.TonConnectUI) {
+      return null;
+    }
+    try {
+      tcUI = new window.TON_CONNECT_UI.TonConnectUI({
+        manifestUrl: "https://babac19.github.io/gem-miniapp/tonconnect-manifest.json"
+      });
+      tcUI.onStatusChange(function (wallet) {
+        if (wallet && wallet.account && wallet.account.address) {
+          onWalletConnected(wallet);
+        }
+      });
+    } catch (e) {
+      return null;
+    }
+    return tcUI;
+  }
+
+  function friendlyAddress(wallet) {
+    var raw = wallet.account.address;
+    try {
+      if (typeof window.TON_CONNECT_UI.toUserFriendlyAddress === "function") {
+        return window.TON_CONNECT_UI.toUserFriendlyAddress(
+          raw, wallet.account.chain === "-3");
+      }
+    } catch (e) { /* fall through to raw */ }
+    return raw;
+  }
+
+  function onWalletConnected(wallet) {
+    var addr = friendlyAddress(wallet);
+    if (state.wallet === addr) return; // already synced with the bot
+    if (sendDataOnly({ action: "wallet", address: addr })) {
+      state.wallet = addr;
+      renderWallet();
+      haptic("success");
+      walletNote("✅ Alamat terkirim — tersimpan di bot.");
+    } else {
+      walletNote("Buka Mini App dari tombol 🎮 Main GEM di chat bot biar alamat wallet-mu tersimpan ya.");
+    }
+  }
+
+  $("btnWalletConnect").addEventListener("click", function () {
+    haptic("tap");
+    var ui = getTonConnectUI();
+    if (!ui) {
+      showError("SDK wallet gagal dimuat, coba lagi ya.");
+      return;
+    }
+    try {
+      ui.openModal();
+    } catch (e) {
+      showError("SDK wallet gagal dimuat, coba lagi ya.");
+    }
+  });
+
+  $("btnWalletDisconnect").addEventListener("click", function () {
+    haptic("tap");
+    var ui = getTonConnectUI();
+    if (ui) {
+      try {
+        var p = ui.disconnect();
+        if (p && typeof p.catch === "function") p.catch(function () {});
+      } catch (e) { /* best-effort */ }
+    }
+    if (sendDataOnly({ action: "wallet_disconnect" })) {
+      state.wallet = null;
+      renderWallet();
+      walletNote("✅ Wallet diputuskan — alamatmu dihapus dari bot.");
+    } else {
+      walletNote("Buka Mini App dari tombol 🎮 Main GEM di chat bot ya.");
+    }
   });
 
   $("btnCopy").addEventListener("click", function () {

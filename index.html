@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>GEM Mining</title>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
+<script src="https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.js"></script>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -44,13 +45,27 @@
   <section class="balance-card">
     <span class="balance-label">Saldo kamu</span>
     <div class="balance-value"><span id="balanceValue">0</span> <span class="balance-unit">GEM</span></div>
-    <span class="balance-note">Poin ditukar 1:1 jadi token GEM saat distribusi 🔁</span>
+    <span class="balance-note">GEM bakal dikirim ke wallet TON kamu saat distribusi 💎</span>
   </section>
 
   <main class="panels">
 
     <!-- ⛏️ TAMBANG -->
     <section id="panel-mining" class="panel active">
+
+      <!-- 🔗 WALLET -->
+      <div class="wallet-card" id="walletCard">
+        <div id="walletOff">
+          <p class="wallet-text">🔗 Wallet TON belum terhubung — hubungkan wallet buat terima distribusi GEM nanti.</p>
+          <button id="btnWalletConnect" class="btn btn-wallet">🔗 Hubungkan Wallet</button>
+        </div>
+        <div id="walletOn" class="hidden">
+          <p class="wallet-text">💎 Wallet terhubung: <b id="walletAddr"></b></p>
+          <button id="btnWalletDisconnect" class="btn btn-wallet-off">Putuskan</button>
+        </div>
+        <p id="walletNote" class="wallet-note hidden"></p>
+      </div>
+
       <div class="gem-stage">
         <div class="ring-wrap">
           <svg class="ring" viewBox="0 0 220 220" aria-hidden="true">
@@ -106,7 +121,7 @@
       <div id="miningIdle" class="mining-box">
         <h2>Siap menambang? ⛏️</h2>
         <p>Satu sesi berjalan <b>8 jam</b> dan menghasilkan
-           <b>80 poin GEM</b>. Gratis, tanpa modal — tinggal mulai,
+           <b>80 GEM</b>. Gratis, tanpa modal — tinggal mulai,
            balik lagi nanti buat klaim.</p>
         <button id="btnStart" class="btn btn-primary btn-big">⛏️ Mulai Mining</button>
         <p class="mining-hint">Habis pencet tombol ini, Mini App nutup dan
@@ -122,7 +137,7 @@
           <div class="stat"><span class="stat-label">💎 Terkumpul</span><span class="stat-value" id="statAccrued">0</span></div>
           <div class="stat"><span class="stat-label">⏱️ Berjalan</span><span class="stat-value" id="statElapsed">0 detik</span></div>
           <div class="stat"><span class="stat-label">⌛ Sisa waktu</span><span class="stat-value" id="statRemaining">8 jam</span></div>
-          <div class="stat"><span class="stat-label">🎯 Target sesi</span><span class="stat-value" id="statTarget">80 poin</span></div>
+          <div class="stat"><span class="stat-label">🎯 Target sesi</span><span class="stat-value" id="statTarget">80 GEM</span></div>
         </div>
         <p class="mining-hint">Kamu boleh tutup halaman ini — tambang tetap
            jalan di bot. Balik lagi pas sesi selesai buat klaim. 💎</p>
@@ -131,11 +146,11 @@
       <!-- state: finished -->
       <div id="miningDone" class="mining-box hidden">
         <h2>Sesi selesai! 🎉</h2>
-        <p>Kamu menghasilkan <b id="doneAmount">80 poin</b> dari sesi ini.
+        <p>Kamu menghasilkan <b id="doneAmount">80 GEM</b> dari sesi ini.
            Klaim sekarang biar masuk ke saldo.</p>
-        <button id="btnClaim" class="btn btn-claim btn-big">✅ Klaim <span id="claimAmount">80</span> Poin</button>
+        <button id="btnClaim" class="btn btn-claim btn-big">✅ Klaim <span id="claimAmount">80</span> GEM</button>
         <p class="mining-hint">Habis pencet tombol ini, Mini App nutup dan
-           poinmu dikonfirmasi di chat bot ya. 💬</p>
+           GEM-mu dikonfirmasi di chat bot ya. 💬</p>
       </div>
 
       <p id="miningError" class="error hidden"></p>
@@ -145,7 +160,7 @@
     <section id="panel-referral" class="panel">
       <h2 class="panel-title">👥 Referral</h2>
       <p>Ajak temanmu mining GEM! Setiap teman yang kamu undang dan
-         menyelesaikan klaim pertamanya, kamu dapat <b>+25 poin</b>
+         menyelesaikan klaim pertamanya, kamu dapat <b>+25 GEM</b>
          (sekali per teman).</p>
       <div id="refLinkBox" class="ref-box">
         <input id="refLink" type="text" readonly value="">
@@ -155,7 +170,7 @@
       <p id="copyOk" class="copy-ok hidden">✅ Link tersalin!</p>
       <div class="stat-grid">
         <div class="stat"><span class="stat-label">👤 Teman diundang</span><span class="stat-value" id="refInvited">0</span></div>
-        <div class="stat"><span class="stat-label">🎁 Bonus referral</span><span class="stat-value" id="refEarnings">0 poin</span></div>
+        <div class="stat"><span class="stat-label">🎁 Bonus referral</span><span class="stat-value" id="refEarnings">0 GEM</span></div>
       </div>
       <p class="muted">Tips: bagikan link-mu ke grup dan media sosial.
          Makin banyak teman mining, makin banyak bonusmu. 🚀</p>
@@ -169,30 +184,20 @@
       <div id="myRank" class="my-rank hidden"></div>
     </section>
 
-    <!-- ℹ️ INFO -->
-    <section id="panel-info" class="panel">
-      <h2 class="panel-title">💎 Apa itu GEM?</h2>
-      <p>GEM adalah token di jaringan <b>TON</b> yang bisa kamu dapatkan
-         <b>gratis</b> lewat mining di sini — tanpa modal, tanpa deposit,
-         tanpa beli apa pun.</p>
-      <ul class="info-list">
-        <li>📦 Total supply: <b>1.000.000.000 GEM</b></li>
-        <li>⛏️ <b>70% dari supply dialokasikan untuk para miner</b></li>
-        <li>🔁 Poin mining ditukar <b>1:1 menjadi GEM</b> saat distribusi</li>
-        <li>⏱️ 1 sesi mining = 8 jam, menghasilkan 80 poin</li>
-        <li>👥 Bonus referral: +25 poin per teman yang klaim pertama</li>
-        <li>💸 Mining di sini <b>100% gratis</b> — tidak ada biaya apa pun</li>
-      </ul>
-      <p>Semakin awal kamu mulai, semakin banyak GEM yang bisa kamu
-         kumpulkan. Selamat mining! 💎</p>
+    <!-- 📋 TUGAS -->
+    <section id="panel-tasks" class="panel">
+      <h2 class="panel-title">📋 Tugas</h2>
+      <p class="muted">Selesaikan tugas buat kumpulin GEM bonus.
+         Habis klaim, hasilnya muncul di chat bot ya. 💬</p>
+      <div id="taskList" class="task-list"></div>
     </section>
   </main>
 
   <nav class="tabbar">
     <button class="tab active" data-tab="mining"><span class="tab-icon">⛏️</span><span>Tambang</span></button>
+    <button class="tab" data-tab="tasks"><span class="tab-icon">📋</span><span>Tugas</span></button>
     <button class="tab" data-tab="referral"><span class="tab-icon">👥</span><span>Referral</span></button>
     <button class="tab" data-tab="leaderboard"><span class="tab-icon">🏆</span><span>Peringkat</span></button>
-    <button class="tab" data-tab="info"><span class="tab-icon">ℹ️</span><span>Info</span></button>
   </nav>
 </div>
 
