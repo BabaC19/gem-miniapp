@@ -1021,7 +1021,7 @@
     var verEl = document.getElementById("appVersion");
     if (!verEl) return;
     var prev = readDiag();
-    verEl.textContent = "GEM Mining v16 • mode "
+    verEl.textContent = "GEM Mining v17 • mode "
       + (apiAvailable() ? "API" : ("OFFLINE (" + apiWhy() + ")"))
       + (prev ? " • prev: " + prev : "");
   }
