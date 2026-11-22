@@ -671,7 +671,7 @@
     // of the API path is visible instead of silent.
     noteDiag("API gagal: " + (why || "nggak diketahui"));
     var verEl = document.getElementById("appVersion");
-    if (verEl) verEl.textContent = "GEM Mining v12 • API GAGAL: " + (why || "?");
+    if (verEl) verEl.textContent = "GEM Mining v13 • API GAGAL: " + (why || "?");
     toast("⚠️ Koneksi API gagal — hasil dikirim lewat chat.");
     setTimeout(function () {
       if (!sendDataOnly(obj)) {
@@ -722,6 +722,25 @@
    * bot's empty reply means no toast). Unlike normal actions there
    * is NO sendData fallback here: sendData cannot work before the
    * app has state, so any failure lands on the blocked screen. */
+  var bootstrapAttempt = 0;
+  function bootstrapFail(why) {
+    // Transient network failures are common on mobile data: retry the
+    // whole bootstrap a few times before giving up, and when we do
+    // give up, SAY WHY on the blocked screen (self-diagnosing).
+    bootstrapAttempt += 1;
+    if (bootstrapAttempt < 3) {
+      setTimeout(function () { apiBootstrap(); }, 1500);
+      return;
+    }
+    var el = document.getElementById("blockedWhy");
+    if (el) {
+      el.textContent = "Detail: " + (why || "koneksi gagal")
+        + (apiWhy() ? " • " + apiWhy() : "");
+    }
+    noteDiag("bootstrap gagal: " + (why || "?"));
+    showScreen("blocked");
+  }
+
   function apiBootstrap() {
     var id = newActionId();
     window.fetch(API_BASE + "/action", {
@@ -731,10 +750,10 @@
         id: id, initData: tg.initData, data: { action: "bootstrap" }
       })
     }).then(function (r) {
-      if (!r.ok) { showScreen("blocked"); return; }
+      if (!r.ok) { bootstrapFail("server balas HTTP " + r.status); return; }
       apiPollBootstrap(id, API_POLL_TRIES);
-    }).catch(function () {
-      showScreen("blocked");
+    }).catch(function (e) {
+      bootstrapFail("POST gagal (" + (e && e.message ? e.message : "network") + ")");
     });
   }
 
@@ -743,7 +762,7 @@
       .then(function (r) { return r.json(); })
       .then(function (res) {
         if (res && res.status === "done") {
-          if (!res.payload) { showScreen("blocked"); return; }
+          if (!res.payload) { bootstrapFail("sesi ditolak server"); return; }
           apiDone(res.reply, res.payload);
           stampVersion();
           showScreen("app");
@@ -758,7 +777,7 @@
             apiPollBootstrap(id, triesLeft - 1);
           }, API_POLL_MS);
         } else {
-          showScreen("blocked");
+          bootstrapFail("jawaban server timeout");
         }
       });
   }
@@ -1082,7 +1101,7 @@
     var verEl = document.getElementById("appVersion");
     if (!verEl) return;
     var prev = readDiag();
-    verEl.textContent = "GEM Mining v12 • mode "
+    verEl.textContent = "GEM Mining v13 • mode "
       + (apiAvailable() ? "API" : ("CHAT (" + apiWhy() + ")"))
       + (prev ? " • lalu: " + prev : "");
   }

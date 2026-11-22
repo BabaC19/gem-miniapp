@@ -653,3 +653,5 @@ body.is-mining .orbit-particle, body.is-done .orbit-particle {
 }
 .tab-icon { font-size: 19px; line-height: 1; }
 .tab.active { color: var(--mint); background: rgba(16, 185, 129, 0.14); }
+
+.blocked-why { margin-top: 14px; font-size: 12px; color: var(--hatch-widget-muted, #8a93a6); word-break: break-word; }
