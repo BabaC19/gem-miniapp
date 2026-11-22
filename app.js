@@ -203,6 +203,15 @@
     $("ringFg").style.strokeDashoffset = String(c * (1 - Math.min(1, Math.max(0, frac))));
   }
 
+  /* Live counter format: 4 decimals so the mined amount visibly runs
+   * (at 10 GEM/hour the 4th decimal moves several times per second). */
+  function fmtLive(n) {
+    return Number(n || 0).toLocaleString("en-US", {
+      minimumFractionDigits: 4,
+      maximumFractionDigits: 4,
+    });
+  }
+
   /* Live ticker: recomputes progress from the payload timestamps. */
   function tick() {
     if (!state || !state.session || state.session.claimable) return;
@@ -228,7 +237,7 @@
     setRing(frac);
     $("progressBar").style.width = (frac * 100).toFixed(1) + "%";
     $("progressPct").textContent = Math.floor(frac * 100) + "%";
-    $("statAccrued").textContent = fmtPoints(accrued) + " GEM";
+    $("statAccrued").textContent = fmtLive(accrued) + " GEM";
     $("statElapsed").textContent = fmtDuration(elapsed);
     $("statRemaining").textContent = fmtDuration(s.end_ts - now);
     $("statTarget").textContent = fmtPoints(s.full_amount) + " GEM";
@@ -236,7 +245,7 @@
 
   function startTicker() {
     stopTicker();
-    tickTimer = setInterval(tick, 1000);
+    tickTimer = setInterval(tick, 100);
   }
   function stopTicker() {
     if (tickTimer) { clearInterval(tickTimer); tickTimer = null; }
