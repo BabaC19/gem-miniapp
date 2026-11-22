@@ -124,6 +124,7 @@
       walletVerified: !!(p.wallet && p.wallet.verified),
       walletPending: !!(p.wallet && p.wallet.pending),
       verify: p.verify && typeof p.verify === "object" ? p.verify : null,
+      withdraw: p.withdraw && typeof p.withdraw === "object" ? p.withdraw : null,
       tasks: Array.isArray(p.tasks) ? p.tasks : [],
       level: p.level && typeof p.level === "object" ? p.level : null,
       idleFull: session ? null : full,
@@ -155,6 +156,7 @@
     }
 
     renderWallet();
+    renderWithdraw();
     renderLevel();
     renderTasks();
 
@@ -332,6 +334,91 @@
       "hidden", !(state.walletPending && !state.walletVerified));
   }
 
+  /* Indonesian-style number for the withdraw card: 7500 -> "7.500"
+   * (fmtPoints with the thousand/decimal separators swapped). */
+  function fmtId(n) {
+    return fmtPoints(n)
+      .replace(/,/g, "\u0001")
+      .replace(/\./g, ",")
+      .replace(/\u0001/g, ".");
+  }
+
+  /* ---------------- withdraw (request queue) ----------------
+   * The GEM jetton is not launched yet: a withdraw here only files a
+   * request — the bot locks the amount out of the balance and queues
+   * it for manual processing at distribution. Client-side checks are
+   * loose hints; the bot re-validates everything server-side. */
+  function wdNote(msg) {
+    var el = $("wdNote");
+    if (!el) return;
+    el.textContent = msg;
+    el.classList.remove("hidden");
+    setTimeout(function () { el.classList.add("hidden"); }, 6000);
+  }
+
+  function renderWithdraw() {
+    var wd = state.withdraw;
+    var min = wd && wd.min ? Number(wd.min) : 7500;
+    $("wdBalance").textContent = fmtId(state.balance) + " GEM";
+    $("wdAddress").textContent = state.wallet ? shortAddr(state.wallet) : "—";
+    $("wdMinNote").textContent = "Minimal withdraw " + fmtId(min) + " GEM.";
+
+    var pending = wd && wd.pending ? wd.pending : null;
+    $("wdForm").classList.toggle("hidden", !!pending);
+    var pEl = $("wdPending");
+    pEl.classList.toggle("hidden", !pending);
+    if (pending) {
+      pEl.textContent = "⏳ Withdraw pending: " + fmtId(pending.amount)
+        + " GEM — lagi antri diproses.";
+    }
+
+    var hist = wd && Array.isArray(wd.history) ? wd.history : [];
+    $("wdHistory").classList.toggle("hidden", !hist.length);
+    var list = $("wdHistoryList");
+    list.innerHTML = "";
+    hist.forEach(function (h) {
+      var li = document.createElement("li");
+      li.textContent = fmtId(h.amount) + " GEM · "
+        + (h.status === "pending" ? "⏳ pending" : h.status);
+      list.appendChild(li);
+    });
+  }
+
+  $("btnWithdraw").addEventListener("click", function () {
+    haptic("tap");
+    var min = state.withdraw && state.withdraw.min
+      ? Number(state.withdraw.min) : 7500;
+    if (!state.wallet) {
+      wdNote("Hubungkan wallet dulu di bagian 🔗 Wallet TON di atas ya.");
+      return;
+    }
+    if (!state.walletVerified) {
+      wdNote("Wallet kamu belum terverifikasi — verifikasi dulu ya (0,05 TON).");
+      return;
+    }
+    if (state.withdraw && state.withdraw.pending) {
+      wdNote("Masih ada request withdraw yang pending — tunggu diproses dulu ya.");
+      return;
+    }
+    var amount = parseFloat(String($("wdAmount").value || "").replace(",", "."));
+    if (!amount || isNaN(amount) || amount < min) {
+      haptic("error");
+      wdNote("Minimal withdraw " + fmtId(min) + " GEM.");
+      return;
+    }
+    if (amount > state.balance) {
+      haptic("error");
+      wdNote("Saldo GEM kamu nggak cukup.");
+      return;
+    }
+    if (!sendAction({ action: "withdraw", amount: amount },
+                    function () { applyOptimistic("withdraw", amount); })) {
+      wdNote("Buka Mini App dari tombol 🎮 Main GEM di chat bot ya.");
+    } else {
+      toast("🧾 Withdraw terkirim — konfirmasi final ada di chat.");
+    }
+  });
+
   /* ---------------- level card ---------------- */
   function renderLevel() {
     var card = $("levelCard");
@@ -342,12 +429,16 @@
     $("levelBadge").textContent = "⭐ Lv " + lv.level;
     $("levelMult").textContent = "pengkali ×" + fmtPoints(lv.multiplier);
     $("levelRate").textContent = fmtPoints(lv.rate_per_hour) + " GEM/jam";
+    // The level comes from GEM held in the TON wallet (on-chain),
+    // never from the in-app balance.
+    $("levelHoldings").textContent = fmtPoints(lv.holdings || 0) + " GEM";
+    $("levelLiveNote").classList.toggle("hidden", !!lv.live);
     var frac = Math.min(1, Math.max(0, Number(lv.progress_frac) || 0));
     $("levelBar").style.width = (frac * 100).toFixed(1) + "%";
     if (lv.next_level) {
-      $("levelNext").textContent = fmtPoints(state.balance) + " / "
+      $("levelNext").textContent = fmtPoints(lv.holdings || 0) + " / "
         + fmtPoints(lv.next_threshold) + " GEM ke Lv " + lv.next_level
-        + " — makin banyak GEM kamu simpan, makin cepat mining-nya!";
+        + " — makin banyak GEM kamu simpan di wallet, makin cepat mining-nya!";
     } else {
       $("levelNext").textContent = "Level MAX 🔥 — pengkali tertinggi!";
     }
@@ -424,7 +515,12 @@
         claim.textContent = "Klaim +" + fmtPoints(t.reward);
         claim.addEventListener("click", function () {
           haptic("tap");
-          if (!sendAndClose({ action: "task", task_id: t.id })) fallbackHint();
+          if (!sendAction({ action: "task", task_id: t.id },
+                          function () { applyOptimistic("task", t); })) {
+            fallbackHint();
+          } else {
+            toast("✅ Klaim terkirim — konfirmasi final ada di chat.");
+          }
         });
         actions.appendChild(claim);
       } else {
@@ -451,6 +547,9 @@
   /* ---------------- actions: sendData back to the bot ------------------ */
   // sendData only exists for web apps opened from a reply-keyboard
   // button; anywhere else it throws or is missing -> caller shows a hint.
+  // The app NEVER closes after a send: the bot's chat reply stays the
+  // source of truth, the UI updates optimistically (applyOptimistic),
+  // and the next open brings a fresh, exact payload.
   function sendDataOnly(obj) {
     if (!tg || typeof tg.sendData !== "function") return false;
     try {
@@ -461,38 +560,117 @@
     return true;
   }
 
-  function sendAndClose(obj) {
+  var sending = false; // in-flight guard against double-taps
+
+  function sendAction(obj, applyFn) {
+    if (sending) return true; // a send is already landing; swallow the tap
     if (!sendDataOnly(obj)) return false;
-    // Give Telegram a beat to deliver the data, then close the app;
-    // the bot posts the result (and a fresh keyboard) into the chat.
-    setTimeout(function () { try { tg.close(); } catch (e) {} }, 200);
+    sending = true;
+    if (applyFn) applyFn();
+    render();
+    sending = false;
     return true;
   }
 
-  function sendAction(action) {
-    return sendAndClose({ action: action });
+  /* Optimistic local state updates, mirroring the server's rules, so
+   * the still-open app stays correct until the next fresh payload. */
+  function applyOptimistic(kind, data) {
+    var now = Date.now() / 1000;
+    if (kind === "start") {
+      var rate = state.level && state.level.rate_per_hour
+        ? Number(state.level.rate_per_hour) : 10;
+      state.session = {
+        start_ts: now,
+        end_ts: now + 8 * 3600,
+        rate_per_hour: rate,
+        full_amount: rate * 8,
+        claimed_total: 0,
+        last_claim_ts: now,
+        min_claim: 1,
+        claimable: false,
+        accrued: 0
+      };
+      state.idleFull = null;
+    } else if (kind === "claim") {
+      var s = state.session;
+      if (!s) return;
+      if (s.claimable) {
+        // Final claim: same formula as the server (full − claimed).
+        state.balance += Math.max(0, s.full_amount - (s.claimed_total || 0));
+        state.session = null;
+        var nextRate = state.level && state.level.rate_per_hour
+          ? Number(state.level.rate_per_hour) : 10;
+        state.idleFull = nextRate * 8;
+      } else {
+        // Early claim: pay the live available amount, move the
+        // watermark — availability restarts from ~0 and ticks up again.
+        var amount = availableOf(s, now);
+        if (amount <= 0) return;
+        state.balance += amount;
+        s.claimed_total = (s.claimed_total || 0) + amount;
+        s.last_claim_ts = now;
+      }
+    } else if (kind === "task") {
+      var t = data;
+      if (!t || t.state === "claimed") return;
+      t.state = "claimed";
+      state.balance += Number(t.reward) || 0;
+    } else if (kind === "withdraw") {
+      var wdAmount = Number(data) || 0;
+      if (!state.withdraw) {
+        state.withdraw = { min: 7500, pending: null, history: [] };
+      }
+      state.balance -= wdAmount;
+      state.withdraw.pending = { id: null, amount: wdAmount, created_ts: now };
+      state.withdraw.history = [{
+        amount: wdAmount, status: "pending", created_ts: now
+      }].concat(state.withdraw.history || []);
+    }
+  }
+
+  var toastTimer = null;
+  function toast(msg) {
+    var el = $("toast");
+    if (!el) return;
+    el.textContent = msg;
+    el.classList.remove("hidden");
+    if (toastTimer) clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { el.classList.add("hidden"); }, 3500);
   }
 
   function fallbackHint() {
     haptic("error");
-    showError("Tombol ini cuma jalan kalau Mini App dibuka dari tombol 🎮 Main GEM di chat bot. Atau pakai tombol ⛏️ Mining / ✅ Klaim langsung di chat ya.");
+    showError("Tombol ini cuma jalan kalau Mini App dibuka dari tombol 🎮 Main GEM di chat bot ya.");
   }
 
   $("btnStart").addEventListener("click", function () {
     haptic("tap");
-    if (!sendAction("start")) fallbackHint();
+    if (!sendAction({ action: "start" }, function () { applyOptimistic("start"); })) {
+      fallbackHint();
+    } else {
+      toast("⛏️ Mining dimulai — konfirmasi ada di chat.");
+    }
   });
 
   $("btnClaim").addEventListener("click", function () {
     haptic("tap");
-    if (!sendAction("claim")) fallbackHint();
+    if (!sendAction({ action: "claim" }, function () { applyOptimistic("claim"); })) {
+      fallbackHint();
+    } else {
+      toast("✅ Klaim terkirim — konfirmasi final ada di chat.");
+    }
   });
 
   // Early claim while the session runs — same "claim" action; the bot
-  // resolves early-vs-final itself from the session state.
+  // resolves early-vs-final itself from the session state, and so
+  // does applyOptimistic (via session.claimable).
   $("btnEarlyClaim").addEventListener("click", function () {
     haptic("tap");
-    if (!sendAction("claim")) fallbackHint();
+    if (!sendAction({ action: "claim" }, function () { applyOptimistic("claim"); })) {
+      fallbackHint();
+    } else {
+      toast("✅ Klaim terkirim — konfirmasi final ada di chat.");
+    }
   });
 
   /* ---------------- TonConnect (wallet) ----------------

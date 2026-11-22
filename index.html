@@ -53,36 +53,6 @@
     <!-- ⛏️ TAMBANG -->
     <section id="panel-mining" class="panel active">
 
-      <!-- 🔗 WALLET -->
-      <div class="wallet-card" id="walletCard">
-        <div id="walletOff">
-          <p class="wallet-text">🔗 Wallet TON belum terhubung — hubungkan wallet buat terima distribusi GEM nanti.</p>
-          <button id="btnWalletConnect" class="btn btn-wallet">🔗 Hubungkan Wallet</button>
-        </div>
-        <div id="walletOn" class="hidden">
-          <p class="wallet-text">💎 Wallet terhubung: <b id="walletAddr"></b><span id="walletBadge" class="wallet-badge"></span></p>
-          <div id="walletVerify" class="hidden">
-            <p class="wallet-text">🛡️ <b>Verifikasi Wallet</b> — kirim 0,05 TON sekali aja buat buktiin wallet ini punya kamu &amp; bukan bot.</p>
-            <p class="wallet-fee">Biaya verifikasi 0,05 TON, sekali bayar, tidak dikembalikan.</p>
-            <button id="btnVerify" class="btn btn-verify">✅ Verifikasi (0,05 TON)</button>
-          </div>
-          <p id="walletPending" class="wallet-text hidden">⏳ Verifikasi lagi dicek di jaringan…</p>
-          <button id="btnWalletDisconnect" class="btn btn-wallet-off">Putuskan</button>
-        </div>
-        <p id="walletNote" class="wallet-note hidden"></p>
-      </div>
-
-      <!-- ⭐ LEVEL -->
-      <div class="level-card" id="levelCard">
-        <div class="level-head">
-          <span class="level-badge" id="levelBadge">⭐ Lv 1</span>
-          <span class="level-mult" id="levelMult">pengkali ×1</span>
-        </div>
-        <p class="level-rate">Kecepatan mining: <b id="levelRate">10 GEM/jam</b></p>
-        <div class="level-progress"><div id="levelBar" class="level-bar"></div></div>
-        <p class="level-next" id="levelNext"></p>
-      </div>
-
       <div class="gem-stage">
         <div class="ring-wrap">
           <svg class="ring" viewBox="0 0 220 220" aria-hidden="true">
@@ -141,8 +111,7 @@
            <b id="idleFull">80 GEM</b>. Gratis, tanpa modal — tinggal mulai,
            balik lagi nanti buat klaim.</p>
         <button id="btnStart" class="btn btn-primary btn-big">⛏️ Mulai Mining</button>
-        <p class="mining-hint">Habis pencet tombol ini, Mini App nutup dan
-           hasilnya muncul di chat bot ya. 💬</p>
+        <p class="mining-hint">Hasilnya dikonfirmasi di chat bot ya. 💬</p>
       </div>
 
       <!-- state: running -->
@@ -168,11 +137,25 @@
         <p>Kamu menghasilkan <b id="doneAmount">80 GEM</b> dari sesi ini.
            Klaim sekarang biar masuk ke saldo.</p>
         <button id="btnClaim" class="btn btn-claim btn-big">✅ Klaim <span id="claimAmount">80</span> GEM</button>
-        <p class="mining-hint">Habis pencet tombol ini, Mini App nutup dan
-           GEM-mu dikonfirmasi di chat bot ya. 💬</p>
+        <p class="mining-hint">GEM-mu dikonfirmasi di chat bot ya. 💬</p>
       </div>
 
       <p id="miningError" class="error hidden"></p>
+
+      <!-- ⭐ LEVEL (di bawah tombol aksi: alur mining dibaca dari atas —
+           saldo → sesi → klaim → level) -->
+      <div class="level-card" id="levelCard">
+        <div class="level-head">
+          <span class="level-badge" id="levelBadge">⭐ Lv 1</span>
+          <span class="level-mult" id="levelMult">pengkali ×1</span>
+        </div>
+        <p class="level-rate">Kecepatan mining: <b id="levelRate">10 GEM/jam</b></p>
+        <p class="level-holdings">GEM di wallet kamu: <b id="levelHoldings">0 GEM</b></p>
+        <div class="level-progress"><div id="levelBar" class="level-bar"></div></div>
+        <p class="level-next" id="levelNext"></p>
+        <p class="level-note">Pengkali naik dari GEM yang kamu simpan di wallet TON kamu — bukan dari saldo di aplikasi.</p>
+        <p class="level-note hidden" id="levelLiveNote">Aktif pas token GEM live di jaringan.</p>
+      </div>
     </section>
 
     <!-- 👥 REFERRAL -->
@@ -210,6 +193,49 @@
          Habis klaim, hasilnya muncul di chat bot ya. 💬</p>
       <div id="taskList" class="task-list"></div>
     </section>
+
+    <!-- 💳 WALLET -->
+    <section id="panel-wallet" class="panel">
+      <h2 class="panel-title">💳 Wallet</h2>
+
+      <!-- 🔗 WALLET TON + 🛡️ VERIFIKASI -->
+      <div class="wallet-card" id="walletCard">
+        <div id="walletOff">
+          <p class="wallet-text">🔗 Wallet TON belum terhubung — hubungkan wallet buat terima distribusi GEM nanti.</p>
+          <button id="btnWalletConnect" class="btn btn-wallet">🔗 Hubungkan Wallet</button>
+        </div>
+        <div id="walletOn" class="hidden">
+          <p class="wallet-text">💎 Wallet terhubung: <b id="walletAddr"></b><span id="walletBadge" class="wallet-badge"></span></p>
+          <div id="walletVerify" class="hidden">
+            <p class="wallet-text">🛡️ <b>Verifikasi Wallet</b> — kirim 0,05 TON sekali aja buat buktiin wallet ini punya kamu &amp; bukan bot.</p>
+            <p class="wallet-fee">Biaya verifikasi 0,05 TON, sekali bayar, tidak dikembalikan.</p>
+            <button id="btnVerify" class="btn btn-verify">✅ Verifikasi (0,05 TON)</button>
+          </div>
+          <p id="walletPending" class="wallet-text hidden">⏳ Verifikasi lagi dicek di jaringan…</p>
+          <button id="btnWalletDisconnect" class="btn btn-wallet-off">Putuskan</button>
+        </div>
+        <p id="walletNote" class="wallet-note hidden"></p>
+      </div>
+
+      <!-- 💸 WITHDRAW -->
+      <div class="withdraw-card" id="withdrawCard">
+        <h3 class="card-heading">💸 Withdraw</h3>
+        <p class="wallet-text">Saldo kamu: <b id="wdBalance">0 GEM</b><br>
+           Tujuan: <b id="wdAddress">—</b></p>
+        <div id="wdForm">
+          <input id="wdAmount" type="number" inputmode="decimal" min="7500" step="any" placeholder="Jumlah GEM (min. 7.500)">
+          <button id="btnWithdraw" class="btn btn-withdraw">💸 Tarik GEM</button>
+          <p class="wallet-fee" id="wdMinNote">Minimal withdraw 7.500 GEM.</p>
+        </div>
+        <p id="wdPending" class="wallet-text hidden"></p>
+        <p class="wallet-fee">Withdraw diproses manual pas distribusi GEM dimulai. GEM dikunci dari saldo kamu pas request dibuat.</p>
+        <div id="wdHistory" class="wd-history hidden">
+          <p class="wd-history-title">Riwayat terakhir:</p>
+          <ul id="wdHistoryList"></ul>
+        </div>
+        <p id="wdNote" class="wallet-note hidden"></p>
+      </div>
+    </section>
   </main>
 
   <nav class="tabbar">
@@ -217,7 +243,10 @@
     <button class="tab" data-tab="tasks"><span class="tab-icon">📋</span><span>Tugas</span></button>
     <button class="tab" data-tab="referral"><span class="tab-icon">👥</span><span>Referral</span></button>
     <button class="tab" data-tab="leaderboard"><span class="tab-icon">🏆</span><span>Peringkat</span></button>
+    <button class="tab" data-tab="wallet"><span class="tab-icon">💳</span><span>Wallet</span></button>
   </nav>
+
+  <div id="toast" class="toast hidden"></div>
 </div>
 
 <script src="app.js"></script>
