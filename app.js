@@ -42,9 +42,9 @@
   function fmtDuration(sec) {
     sec = Math.max(0, Math.floor(sec));
     var h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60), s = sec % 60;
-    if (h) return h + " jam " + m + " menit";
-    if (m) return m + " menit " + s + " detik";
-    return s + " detik";
+    if (h) return h + "h " + m + "m";
+    if (m) return m + "m " + s + "s";
+    return s + "s";
   }
 
   function haptic(kind) {
@@ -161,7 +161,7 @@
 
     $("balanceValue").textContent = fmtPoints(state.balance);
     if (state.user && state.user.first_name) {
-      $("userChip").textContent = "Halo, " + state.user.first_name + " 👋";
+      $("userChip").textContent = "Hello, " + state.user.first_name + " 👋";
     }
 
     renderWallet();
@@ -214,9 +214,9 @@
       : "ID: " + (state.user && state.user.id != null ? state.user.id : "—");
     var badge = $("profileBadge");
     var badgeText = "";
-    if (state.walletVerified) badgeText = "🛡️ Wallet terverifikasi";
-    else if (state.walletPending) badgeText = "⏳ Verifikasi lagi dicek…";
-    else if (state.wallet) badgeText = "🔗 Wallet terhubung · belum terverifikasi";
+    if (state.walletVerified) badgeText = "🛡️ Wallet verified";
+    else if (state.walletPending) badgeText = "⏳ Verification being checked…";
+    else if (state.wallet) badgeText = "🔗 Wallet connected · not verified yet";
     badge.textContent = badgeText;
     badge.classList.toggle("hidden", !badgeText);
     $("profileBalance").textContent = fmtPoints(state.balance) + " GEM";
@@ -276,10 +276,10 @@
     if (earlyBtn) {
       if (avail >= (s.min_claim || 1)) {
         earlyBtn.disabled = false;
-        earlyBtn.textContent = "💰 Klaim " + fmtLive(avail) + " GEM";
+        earlyBtn.textContent = "💰 Claim " + fmtLive(avail) + " GEM";
       } else {
         earlyBtn.disabled = true;
-        earlyBtn.textContent = "Klaim (min. 1 GEM)";
+        earlyBtn.textContent = "Claim (min. 1 GEM)";
       }
     }
   }
@@ -319,7 +319,7 @@
     $("walletOn").classList.toggle("hidden", !on);
     if (!on) return;
     $("walletAddr").textContent = shortAddr(state.wallet);
-    $("walletBadge").textContent = state.walletVerified ? " 🛡️ Terverifikasi" : "";
+    $("walletBadge").textContent = state.walletVerified ? " 🛡️ Verified" : "";
     // Verify step: only while connected, unverified, not already
     // pending, and the bot actually sent a verify object (it doesn't
     // when GEM_PROJECT_WALLET is unset or right after a fresh connect
@@ -330,13 +330,9 @@
       "hidden", !(state.walletPending && !state.walletVerified));
   }
 
-  /* Indonesian-style number for the withdraw card: 7500 -> "7.500"
-   * (fmtPoints with the thousand/decimal separators swapped). */
+  /* Withdraw amounts use the same English number format. */
   function fmtId(n) {
-    return fmtPoints(n)
-      .replace(/,/g, "\u0001")
-      .replace(/\./g, ",")
-      .replace(/\u0001/g, ".");
+    return fmtPoints(n);
   }
 
   /* ---------------- withdraw (request queue) ----------------
@@ -357,15 +353,15 @@
     var min = wd && wd.min ? Number(wd.min) : 7500;
     $("wdBalance").textContent = fmtId(state.balance) + " GEM";
     $("wdAddress").textContent = state.wallet ? shortAddr(state.wallet) : "—";
-    $("wdMinNote").textContent = "Minimal withdraw " + fmtId(min) + " GEM.";
+    $("wdMinNote").textContent = "Minimum withdraw is " + fmtId(min) + " GEM.";
 
     var pending = wd && wd.pending ? wd.pending : null;
     $("wdForm").classList.toggle("hidden", !!pending);
     var pEl = $("wdPending");
     pEl.classList.toggle("hidden", !pending);
     if (pending) {
-      pEl.textContent = "⏳ Withdraw pending: " + fmtId(pending.amount)
-        + " GEM — lagi antri diproses.";
+      pEl.textContent = "⏳ Pending withdraw: " + fmtId(pending.amount)
+        + " GEM — queued for processing.";
     }
 
     var hist = wd && Array.isArray(wd.history) ? wd.history : [];
@@ -385,33 +381,33 @@
     var min = state.withdraw && state.withdraw.min
       ? Number(state.withdraw.min) : 7500;
     if (!state.wallet) {
-      wdNote("Hubungkan wallet dulu di bagian 🔗 Wallet TON di atas ya.");
+      wdNote("Connect your wallet first in the 🔗 TON Wallet section above.");
       return;
     }
     if (!state.walletVerified) {
-      wdNote("Wallet kamu belum terverifikasi — verifikasi dulu ya (0,05 TON).");
+      wdNote("Your wallet isn't verified yet — please verify it first (0.05 TON).");
       return;
     }
     if (state.withdraw && state.withdraw.pending) {
-      wdNote("Masih ada request withdraw yang pending — tunggu diproses dulu ya.");
+      wdNote("You already have a pending withdraw request — please wait for it to be processed.");
       return;
     }
     var amount = parseFloat(String($("wdAmount").value || "").replace(",", "."));
     if (!amount || isNaN(amount) || amount < min) {
       haptic("error");
-      wdNote("Minimal withdraw " + fmtId(min) + " GEM.");
+      wdNote("Minimum withdraw is " + fmtId(min) + " GEM.");
       return;
     }
     if (amount > state.balance) {
       haptic("error");
-      wdNote("Saldo GEM kamu nggak cukup.");
+      wdNote("Your GEM balance isn't enough.");
       return;
     }
     if (!sendAction({ action: "withdraw", amount: amount },
                     function () { applyOptimistic("withdraw", amount); })) {
-      wdNote("Buka Mini App dari tombol 🎮 Main GEM di chat bot ya.");
+      wdNote("Open the Mini App from the 🎮 Play GEM button in the bot chat.");
     } else {
-      toast("🧾 Withdraw terkirim — konfirmasi final ada di chat.");
+      toast("🧾 Withdraw sent — final confirmation is in the chat.");
     }
   });
 
@@ -456,12 +452,12 @@
     if (!lv) { card.classList.add("hidden"); return; }
     card.classList.remove("hidden");
     $("levelBadge").textContent = "⭐ Lv " + lv.level;
-    $("levelMult").textContent = "pengkali ×" + fmtPoints(lv.multiplier);
+    $("levelMult").textContent = "multiplier ×" + fmtPoints(lv.multiplier);
     // Earnings are presented per day (payload rate_per_day; the
     // hourly payload field × 24 as fallback).
     $("levelRate").textContent = fmtPoints(
       lv.rate_per_day || (Number(lv.rate_per_hour) || BASE_RATE) * 24
-    ) + " GEM/hari";
+    ) + " GEM/day";
     renderLevelTable(lv);
     // The level comes from GEM held in the TON wallet (on-chain),
     // never from the in-app balance.
@@ -471,10 +467,10 @@
     $("levelBar").style.width = (frac * 100).toFixed(1) + "%";
     if (lv.next_level) {
       $("levelNext").textContent = fmtPoints(lv.holdings || 0) + " / "
-        + fmtPoints(lv.next_threshold) + " GEM ke Lv " + lv.next_level
-        + " — makin banyak GEM kamu simpan di wallet, makin cepat mining-nya!";
+        + fmtPoints(lv.next_threshold) + " GEM to Lv " + lv.next_level
+        + " — the more GEM you hold in your wallet, the faster you mine!";
     } else {
-      $("levelNext").textContent = "Level MAX 🔥 — pengkali tertinggi!";
+      $("levelNext").textContent = "MAX level 🔥 — highest multiplier!";
     }
     if (state.idleFull != null) {
       $("idleFull").textContent = fmtPoints(state.idleFull) + " GEM";
@@ -498,7 +494,7 @@
     if (!tasks.length) {
       var empty = document.createElement("p");
       empty.className = "muted";
-      empty.textContent = "Belum ada tugas saat ini. Cek lagi nanti ya. 💎";
+      empty.textContent = "No tasks right now. Check back later. 💎";
       list.appendChild(empty);
       return;
     }
@@ -531,13 +527,13 @@
       if (t.state === "claimed") {
         var done = document.createElement("span");
         done.className = "task-state done";
-        done.textContent = "✅ Selesai";
+        done.textContent = "✅ Done";
         actions.appendChild(done);
       } else if (t.state === "ready") {
         if (t.url) {
           var open = document.createElement("button");
           open.className = "btn btn-task-open";
-          open.textContent = "Buka";
+          open.textContent = "Open";
           open.addEventListener("click", function () {
             haptic("tap");
             openExternal(t.url);
@@ -546,21 +542,21 @@
         }
         var claim = document.createElement("button");
         claim.className = "btn btn-task";
-        claim.textContent = "Klaim +" + fmtPoints(t.reward);
+        claim.textContent = "Claim +" + fmtPoints(t.reward);
         claim.addEventListener("click", function () {
           haptic("tap");
           if (!sendAction({ action: "task", task_id: t.id },
                           function () { applyOptimistic("task", t); })) {
             fallbackHint();
           } else {
-            toast("✅ Klaim terkirim — konfirmasi final ada di chat.");
+            toast("✅ Claim sent — final confirmation is in the chat.");
           }
         });
         actions.appendChild(claim);
       } else {
         var lock = document.createElement("span");
         lock.className = "task-state locked";
-        lock.textContent = "🔒 Belum terpenuhi";
+        lock.textContent = "🔒 Locked";
         actions.appendChild(lock);
       }
 
@@ -608,10 +604,10 @@
     catch (e) { return ""; }
   }
   function apiWhy() {
-    if (!API_BASE) return "API_BASE kosong";
-    if (!tg) return "Telegram object nggak ada";
-    if (!tg.initData) return "initData kosong";
-    if (typeof window.fetch !== "function") return "fetch nggak ada";
+    if (!API_BASE) return "API_BASE empty";
+    if (!tg) return "Telegram object missing";
+    if (!tg.initData) return "initData empty";
+    if (typeof window.fetch !== "function") return "fetch missing";
     return "";
   }
 
@@ -629,8 +625,8 @@
   }
 
   function apiError(why) {
-    noteDiag("API gagal: " + (why || "nggak diketahui"));
-    toast("⚠️ Koneksi ke server gagal — coba lagi ya.");
+    noteDiag("API failed: " + (why || "unknown"));
+    toast("⚠️ Connection to the server failed — please try again.");
     sending = false;
   }
 
@@ -691,16 +687,16 @@
     }
     var el = document.getElementById("blockedWhy");
     if (el) {
-      el.textContent = "Detail: " + (why || "koneksi gagal")
+      el.textContent = "Details: " + (why || "connection failed")
         + (apiWhy() ? " • " + apiWhy() : "");
     }
-    noteDiag("bootstrap gagal: " + (why || "?"));
+    noteDiag("bootstrap failed: " + (why || "?"));
     showScreen("blocked");
   }
 
   function apiBootstrap() {
     fetchAction({ action: "bootstrap" }).then(function (res) {
-      if (!res.payload) { bootstrapFail("sesi ditolak server"); return; }
+      if (!res.payload) { bootstrapFail("session rejected by server"); return; }
       apiDone(res.reply, res.payload);
       stampVersion();
       showScreen("app");
@@ -713,8 +709,8 @@
   function sendAction(obj, applyFn) {
     if (sending) return true; // a send is already landing; swallow the tap
     if (!apiAvailable()) {
-      noteDiag("API nggak tersedia: " + apiWhy());
-      toast("⚠️ " + (apiWhy() || "Koneksi nggak tersedia"));
+      noteDiag("API unavailable: " + apiWhy());
+      toast("⚠️ " + (apiWhy() || "Connection unavailable"));
       return false;
     }
     // Paint the optimistic update now; the server's reply toast +
@@ -798,7 +794,7 @@
 
   function fallbackHint() {
     haptic("error");
-    showError("Tombol ini cuma jalan kalau Mini App dibuka dari tombol 🎮 Main GEM di chat bot ya.");
+    showError("This button only works when the Mini App is opened from the 🎮 Play GEM button in the bot chat.");
   }
 
   $("btnStart").addEventListener("click", function () {
@@ -806,7 +802,7 @@
     if (!sendAction({ action: "start" }, function () { applyOptimistic("start"); })) {
       fallbackHint();
     } else {
-      toast("⛏️ Mining dimulai — konfirmasi ada di chat.");
+      toast("⛏️ Mining started — confirmation is in the chat.");
     }
   });
 
@@ -815,7 +811,7 @@
     if (!sendAction({ action: "claim" }, function () { applyOptimistic("claim"); })) {
       fallbackHint();
     } else {
-      toast("✅ Klaim terkirim — konfirmasi final ada di chat.");
+      toast("✅ Claim sent — final confirmation is in the chat.");
     }
   });
 
@@ -827,7 +823,7 @@
     if (!sendAction({ action: "claim" }, function () { applyOptimistic("claim"); })) {
       fallbackHint();
     } else {
-      toast("✅ Klaim terkirim — konfirmasi final ada di chat.");
+      toast("✅ Claim sent — final confirmation is in the chat.");
     }
   });
 
@@ -883,9 +879,9 @@
     })) {
       renderWallet();
       haptic("success");
-      walletNote("✅ Alamat terkirim — tersimpan di bot. Buka lagi Mini App-nya buat langkah verifikasi wallet ya. 🛡️");
+      walletNote("✅ Address sent — saved to the bot. Reopen the Mini App for the wallet verification step. 🛡️");
     } else {
-      walletNote("Buka Mini App dari tombol 🎮 Main GEM di chat bot biar alamat wallet-mu tersimpan ya.");
+      walletNote("Open the Mini App from the 🎮 Play GEM button in the bot chat so your wallet address gets saved.");
     }
   }
 
@@ -899,7 +895,7 @@
     var v = state.verify;
     var ui = getTonConnectUI();
     if (!v || !ui) {
-      walletNote("Langkah verifikasi belum tersedia — buka lagi Mini App-nya dari chat bot ya.");
+      walletNote("The verification step isn't available yet — reopen the Mini App from the bot chat.");
       return;
     }
     var tx = {
@@ -915,7 +911,7 @@
       sent = ui.sendTransaction(tx);
     } catch (e) {
       haptic("error");
-      walletNote("Transaksinya dibatalkan/gagal.");
+      walletNote("The transaction was cancelled/failed.");
       return;
     }
     Promise.resolve(sent).then(function () {
@@ -924,13 +920,13 @@
       })) {
         renderWallet();
         haptic("success");
-        walletNote("⏳ Pembayaran terkirim — lagi dicek di jaringan. Bot bakal ngabarin di chat kalo wallet kamu udah terverifikasi. 🛡️");
+        walletNote("⏳ Payment sent — being checked on-chain. The bot will message you in chat once your wallet is verified. 🛡️");
       } else {
-        walletNote("Buka Mini App dari tombol 🎮 Main GEM di chat bot ya.");
+        walletNote("Open the Mini App from the 🎮 Play GEM button in the bot chat.");
       }
     }, function () {
       haptic("error");
-      walletNote("Transaksinya dibatalkan/gagal.");
+      walletNote("The transaction was cancelled/failed.");
     });
   });
 
@@ -938,13 +934,13 @@
     haptic("tap");
     var ui = getTonConnectUI();
     if (!ui) {
-      showError("SDK wallet gagal dimuat, coba lagi ya.");
+      showError("The wallet SDK failed to load, please try again.");
       return;
     }
     try {
       ui.openModal();
     } catch (e) {
-      showError("SDK wallet gagal dimuat, coba lagi ya.");
+      showError("The wallet SDK failed to load, please try again.");
     }
   });
 
@@ -964,9 +960,9 @@
       state.verify = null;
     })) {
       renderWallet();
-      walletNote("✅ Wallet diputuskan — alamatmu dihapus dari bot.");
+      walletNote("✅ Wallet disconnected — your address was removed from the bot.");
     } else {
-      walletNote("Buka Mini App dari tombol 🎮 Main GEM di chat bot ya.");
+      walletNote("Open the Mini App from the 🎮 Play GEM button in the bot chat.");
     }
   });
 
@@ -1025,9 +1021,9 @@
     var verEl = document.getElementById("appVersion");
     if (!verEl) return;
     var prev = readDiag();
-    verEl.textContent = "GEM Mining v14 • mode "
+    verEl.textContent = "GEM Mining v15 • mode "
       + (apiAvailable() ? "API" : ("OFFLINE (" + apiWhy() + ")"))
-      + (prev ? " • lalu: " + prev : "");
+      + (prev ? " • prev: " + prev : "");
   }
 
   var payload = parsePayload();

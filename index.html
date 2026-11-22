@@ -1,12 +1,12 @@
 <!DOCTYPE html>
-<html lang="id">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>GEM Mining</title>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
-<script defer src="tonconnect-ui.min.js?v=14"></script>
-<link rel="stylesheet" href="style.css?v=14">
+<script defer src="tonconnect-ui.min.js?v=15"></script>
+<link rel="stylesheet" href="style.css?v=15">
 </head>
 <body>
 
@@ -14,11 +14,11 @@
 <div id="blocked" class="blocked hidden">
   <div class="blocked-card">
     <div class="blocked-gem">💎</div>
-    <h1>Buka dari Telegram ya</h1>
-    <p>Halaman ini adalah Mini App <b>GEM Mining</b> dan hanya bisa dibuka
-       dari dalam aplikasi Telegram lewat bot resmi kami.</p>
-    <p class="blocked-hint">Cari bot GEM Mining di Telegram, lalu tekan tombol
-       <b>🎮 Main GEM</b> di keyboard chat bot buat masuk ke sini.</p>
+    <h1>Please open this from Telegram</h1>
+    <p>This page is the <b>GEM Mining</b> Mini App and can only be opened
+       from inside Telegram via our official bot.</p>
+    <p class="blocked-hint">Find the GEM Mining bot on Telegram, then tap the
+       <b>🎮 Play GEM</b> button on the bot's chat keyboard to get here.</p>
     <p class="blocked-why" id="blockedWhy"></p>
   </div>
 </div>
@@ -83,7 +83,7 @@
     <span class="load-particle lp3"></span>
     <span class="load-particle lp4"></span>
   </div>
-  <p class="load-text">Memuat tambang…</p>
+  <p class="load-text">Loading the mine…</p>
   <div class="load-bar" aria-hidden="true"><span class="load-bar-fill"></span></div>
 </div>
 
@@ -95,16 +95,16 @@
       <span class="brand-gem">💎</span>
       <div class="brand-text">
         <span class="brand-name">GEM MINING</span>
-        <span class="brand-sub">Tambang GEM gratis di TON</span>
+        <span class="brand-sub">Free GEM mining on TON</span>
       </div>
     </div>
-    <div class="user-chip" id="userChip">Halo, Miner 👋</div>
+    <div class="user-chip" id="userChip">Hello, Miner 👋</div>
   </header>
 
   <section class="balance-card">
-    <span class="balance-label">Saldo kamu</span>
+    <span class="balance-label">Your balance</span>
     <div class="balance-value"><span id="balanceValue">0</span> <span class="balance-unit">GEM</span></div>
-    <span class="balance-note">GEM bakal dikirim ke wallet TON kamu saat distribusi 💎</span>
+    <span class="balance-note">Your GEM will be sent to your TON wallet at distribution 💎</span>
   </section>
 
   <main class="panels">
@@ -165,38 +165,38 @@
 
       <!-- state: idle -->
       <div id="miningIdle" class="mining-box">
-        <h2>Siap menambang? ⛏️</h2>
-        <p>Satu sesi berjalan <b>8 jam</b> dan menghasilkan
-           <b id="idleFull">116.67 GEM</b>. Gratis, tanpa modal — tinggal mulai,
-           balik lagi nanti buat klaim.</p>
-        <button id="btnStart" class="btn btn-primary btn-big">⛏️ Mulai Mining</button>
-        <p class="mining-hint">Hasilnya dikonfirmasi di chat bot ya. 💬</p>
+        <h2>Ready to mine? ⛏️</h2>
+        <p>One session runs <b>8 hours</b> and earns
+           <b id="idleFull">116.67 GEM</b>. Free, no capital needed — just start,
+           then come back later to claim.</p>
+        <button id="btnStart" class="btn btn-primary btn-big">⛏️ Start Mining</button>
+        <p class="mining-hint">Your results are confirmed in the bot chat. 💬</p>
       </div>
 
       <!-- state: running -->
       <div id="miningRunning" class="mining-box hidden">
-        <h2>Mining sedang berjalan… ⛏️</h2>
+        <h2>Mining in progress… ⛏️</h2>
         <div class="progress-track"><div id="progressBar" class="progress-bar"></div></div>
         <div class="progress-pct" id="progressPct">0%</div>
         <div class="stat-grid">
-          <div class="stat"><span class="stat-label">💎 Terkumpul</span><span class="stat-value" id="statAccrued">0</span></div>
-          <div class="stat"><span class="stat-label">⏱️ Berjalan</span><span class="stat-value" id="statElapsed">0 detik</span></div>
-          <div class="stat"><span class="stat-label">⌛ Sisa waktu</span><span class="stat-value" id="statRemaining">8 jam</span></div>
-          <div class="stat"><span class="stat-label">🎯 Target sesi</span><span class="stat-value" id="statTarget">116.67 GEM</span></div>
+          <div class="stat"><span class="stat-label">💎 Collected</span><span class="stat-value" id="statAccrued">0</span></div>
+          <div class="stat"><span class="stat-label">⏱️ Elapsed</span><span class="stat-value" id="statElapsed">0s</span></div>
+          <div class="stat"><span class="stat-label">⌛ Time left</span><span class="stat-value" id="statRemaining">8h</span></div>
+          <div class="stat"><span class="stat-label">🎯 Session target</span><span class="stat-value" id="statTarget">116.67 GEM</span></div>
         </div>
-        <button id="btnEarlyClaim" class="btn btn-claim btn-early" disabled>Klaim (min. 1 GEM)</button>
-        <p class="mining-hint">Udah terkumpul 1 GEM? Klaim aja sekarang —
-           sesi tetap jalan, sisanya lanjut ditambang. Kamu juga boleh
-           tutup halaman ini — tambang tetap jalan di bot. 💎</p>
+        <button id="btnEarlyClaim" class="btn btn-claim btn-early" disabled>Claim (min. 1 GEM)</button>
+        <p class="mining-hint">Collected 1 GEM already? Claim it now —
+           your session keeps running and the rest keeps mining. You can
+           also close this page — the mine keeps running in the bot. 💎</p>
       </div>
 
       <!-- state: finished -->
       <div id="miningDone" class="mining-box hidden">
-        <h2>Sesi selesai! 🎉</h2>
-        <p>Kamu menghasilkan <b id="doneAmount">116.67 GEM</b> dari sesi ini.
-           Klaim sekarang biar masuk ke saldo.</p>
-        <button id="btnClaim" class="btn btn-claim btn-big">✅ Klaim <span id="claimAmount">116.67</span> GEM</button>
-        <p class="mining-hint">GEM-mu dikonfirmasi di chat bot ya. 💬</p>
+        <h2>Session complete! 🎉</h2>
+        <p>You earned <b id="doneAmount">116.67 GEM</b> from this session.
+           Claim now to add it to your balance.</p>
+        <button id="btnClaim" class="btn btn-claim btn-big">✅ Claim <span id="claimAmount">116.67</span> GEM</button>
+        <p class="mining-hint">Your GEM is confirmed in the bot chat. 💬</p>
       </div>
 
       <p id="miningError" class="error hidden"></p>
@@ -204,9 +204,9 @@
 
     <!-- ✅ TASK -->
     <section id="panel-task" class="panel">
-      <h2 class="panel-title">📋 Tugas</h2>
-      <p class="muted">Selesaikan tugas buat kumpulin GEM bonus.
-         Habis klaim, hasilnya muncul di chat bot ya. 💬</p>
+      <h2 class="panel-title">📋 Tasks</h2>
+      <p class="muted">Complete tasks to collect bonus GEM.
+         After you claim, the result appears in the bot chat. 💬</p>
       <div id="taskList" class="task-list"></div>
     </section>
 
@@ -218,46 +218,46 @@
       <div class="level-card" id="levelCard">
         <div class="level-head">
           <span class="level-badge" id="levelBadge">⭐ Lv 1</span>
-          <span class="level-mult" id="levelMult">pengkali ×1</span>
+          <span class="level-mult" id="levelMult">multiplier ×1</span>
         </div>
-        <p class="level-rate">Pendapatan mining: <b id="levelRate">350 GEM/hari</b></p>
-        <p class="level-holdings">GEM di wallet kamu: <b id="levelHoldings">0 GEM</b></p>
+        <p class="level-rate">Mining earnings: <b id="levelRate">350 GEM/day</b></p>
+        <p class="level-holdings">GEM in your wallet: <b id="levelHoldings">0 GEM</b></p>
         <div class="level-progress"><div id="levelBar" class="level-bar"></div></div>
         <p class="level-next" id="levelNext"></p>
         <table class="level-table">
           <thead>
-            <tr><th>Level</th><th>GEM di wallet</th><th>Pengkali</th><th>Pendapatan/hari</th></tr>
+            <tr><th>Level</th><th>GEM in wallet</th><th>Multiplier</th><th>Earnings/day</th></tr>
           </thead>
           <tbody id="levelTableBody"></tbody>
         </table>
-        <p class="level-note">Pengkali naik dari GEM yang kamu simpan di wallet TON kamu — bukan dari saldo di aplikasi.</p>
-        <p class="level-note hidden" id="levelLiveNote">Aktif pas token GEM live di jaringan.</p>
+        <p class="level-note">Your multiplier grows from the GEM you hold in your TON wallet — not from your in-app balance.</p>
+        <p class="level-note hidden" id="levelLiveNote">Activates when the GEM token goes live on-chain.</p>
       </div>
     </section>
 
     <!-- 👥 FRIENDS (referral) -->
     <section id="panel-friends" class="panel">
       <h2 class="panel-title">👥 Referral</h2>
-      <p>Ajak temanmu mining GEM! Setiap teman yang kamu undang dan
-         menyelesaikan klaim pertamanya, kamu dapat <b>+25 GEM</b>
-         (sekali per teman).</p>
+      <p>Invite your friends to mine GEM! Every friend you invite who
+         completes their first claim earns you <b>+25 GEM</b>
+         (once per friend).</p>
       <div id="refLinkBox" class="ref-box">
         <input id="refLink" type="text" readonly value="">
-        <button id="btnCopy" class="btn btn-primary">📋 Salin</button>
+        <button id="btnCopy" class="btn btn-primary">📋 Copy</button>
       </div>
-      <p id="refNoLink" class="hidden muted">Link referral belum tersedia saat ini.</p>
-      <p id="copyOk" class="copy-ok hidden">✅ Link tersalin!</p>
+      <p id="refNoLink" class="hidden muted">Referral link isn't available right now.</p>
+      <p id="copyOk" class="copy-ok hidden">✅ Link copied!</p>
       <div class="stat-grid">
-        <div class="stat"><span class="stat-label">👤 Teman diundang</span><span class="stat-value" id="refInvited">0</span></div>
-        <div class="stat"><span class="stat-label">🎁 Bonus referral</span><span class="stat-value" id="refEarnings">0 GEM</span></div>
+        <div class="stat"><span class="stat-label">👤 Friends invited</span><span class="stat-value" id="refInvited">0</span></div>
+        <div class="stat"><span class="stat-label">🎁 Referral bonus</span><span class="stat-value" id="refEarnings">0 GEM</span></div>
       </div>
-      <p class="muted">Tips: bagikan link-mu ke grup dan media sosial.
-         Makin banyak teman mining, makin banyak bonusmu. 🚀</p>
+      <p class="muted">Tip: share your link in groups and on social media.
+         The more friends mining, the bigger your bonus. 🚀</p>
     </section>
 
     <!-- 👤 PROFIL (profil + wallet) -->
     <section id="panel-profil" class="panel">
-      <h2 class="panel-title">👤 Profil</h2>
+      <h2 class="panel-title">👤 Profile</h2>
 
       <!-- 👤 PROFILE HEADER + STATS -->
       <div class="profile-card" id="profileCard">
@@ -270,8 +270,8 @@
           </div>
         </div>
         <div class="stat-grid cols-3">
-          <div class="stat"><span class="stat-label">💰 Saldo</span><span class="stat-value" id="profileBalance">0 GEM</span></div>
-          <div class="stat"><span class="stat-label">⛏️ Total ditambang</span><span class="stat-value" id="profileMined">0 GEM</span></div>
+          <div class="stat"><span class="stat-label">💰 Balance</span><span class="stat-value" id="profileBalance">0 GEM</span></div>
+          <div class="stat"><span class="stat-label">⛏️ Total mined</span><span class="stat-value" id="profileMined">0 GEM</span></div>
           <div class="stat"><span class="stat-label">👥 Referral</span><span class="stat-value" id="profileReferrals">0</span></div>
         </div>
       </div>
@@ -281,18 +281,18 @@
       <!-- 🔗 WALLET TON + 🛡️ VERIFIKASI -->
       <div class="wallet-card" id="walletCard">
         <div id="walletOff">
-          <p class="wallet-text">🔗 Wallet TON belum terhubung — hubungkan wallet buat terima distribusi GEM nanti.</p>
-          <button id="btnWalletConnect" class="btn btn-wallet">🔗 Hubungkan Wallet</button>
+          <p class="wallet-text">🔗 TON wallet not connected yet — connect your wallet to receive the GEM distribution later.</p>
+          <button id="btnWalletConnect" class="btn btn-wallet">🔗 Connect Wallet</button>
         </div>
         <div id="walletOn" class="hidden">
-          <p class="wallet-text">💎 Wallet terhubung: <b id="walletAddr"></b><span id="walletBadge" class="wallet-badge"></span></p>
+          <p class="wallet-text">💎 Wallet connected: <b id="walletAddr"></b><span id="walletBadge" class="wallet-badge"></span></p>
           <div id="walletVerify" class="hidden">
-            <p class="wallet-text">🛡️ <b>Verifikasi Wallet</b> — kirim 0,05 TON sekali aja buat buktiin wallet ini punya kamu &amp; bukan bot.</p>
-            <p class="wallet-fee">Biaya verifikasi 0,05 TON, sekali bayar, tidak dikembalikan.</p>
-            <button id="btnVerify" class="btn btn-verify">✅ Verifikasi (0,05 TON)</button>
+            <p class="wallet-text">🛡️ <b>Wallet Verification</b> — send 0.05 TON once to prove this wallet is yours &amp; not a bot.</p>
+            <p class="wallet-fee">Verification fee: 0.05 TON, one-time payment, non-refundable.</p>
+            <button id="btnVerify" class="btn btn-verify">✅ Verify (0.05 TON)</button>
           </div>
-          <p id="walletPending" class="wallet-text hidden">⏳ Verifikasi lagi dicek di jaringan…</p>
-          <button id="btnWalletDisconnect" class="btn btn-wallet-off">Putuskan</button>
+          <p id="walletPending" class="wallet-text hidden">⏳ Verification is being checked on-chain…</p>
+          <button id="btnWalletDisconnect" class="btn btn-wallet-off">Disconnect</button>
         </div>
         <p id="walletNote" class="wallet-note hidden"></p>
       </div>
@@ -300,22 +300,22 @@
       <!-- 💸 WITHDRAW -->
       <div class="withdraw-card" id="withdrawCard">
         <h3 class="card-heading">💸 Withdraw</h3>
-        <p class="wallet-text">Saldo kamu: <b id="wdBalance">0 GEM</b><br>
-           Tujuan: <b id="wdAddress">—</b></p>
+        <p class="wallet-text">Your balance: <b id="wdBalance">0 GEM</b><br>
+           Destination: <b id="wdAddress">—</b></p>
         <div id="wdForm">
-          <input id="wdAmount" type="number" inputmode="decimal" min="7500" step="any" placeholder="Jumlah GEM (min. 7.500)">
-          <button id="btnWithdraw" class="btn btn-withdraw">💸 Tarik GEM</button>
-          <p class="wallet-fee" id="wdMinNote">Minimal withdraw 7.500 GEM.</p>
+          <input id="wdAmount" type="number" inputmode="decimal" min="7500" step="any" placeholder="GEM amount (min. 7,500)">
+          <button id="btnWithdraw" class="btn btn-withdraw">💸 Withdraw GEM</button>
+          <p class="wallet-fee" id="wdMinNote">Minimum withdraw is 7,500 GEM.</p>
         </div>
         <p id="wdPending" class="wallet-text hidden"></p>
-        <p class="wallet-fee">Withdraw diproses manual pas distribusi GEM dimulai. GEM dikunci dari saldo kamu pas request dibuat.</p>
+        <p class="wallet-fee">Withdrawals are processed manually once the GEM distribution starts. GEM is locked from your balance when the request is made.</p>
         <div id="wdHistory" class="wd-history hidden">
-          <p class="wd-history-title">Riwayat terakhir:</p>
+          <p class="wd-history-title">Recent history:</p>
           <ul id="wdHistoryList"></ul>
         </div>
         <p id="wdNote" class="wallet-note hidden"></p>
       </div>
-      <p class="app-version" id="appVersion">GEM Mining v14</p>
+      <p class="app-version" id="appVersion">GEM Mining v15</p>
     </section>
   </main>
 
@@ -324,12 +324,12 @@
     <button class="tab" data-tab="task"><span class="tab-icon">✅</span><span>Task</span></button>
     <button class="tab" data-tab="boost"><span class="tab-icon">🚀</span><span>Boost</span></button>
     <button class="tab" data-tab="friends"><span class="tab-icon">👥</span><span>Friends</span></button>
-    <button class="tab" data-tab="profil"><span class="tab-icon">👤</span><span>Profil</span></button>
+    <button class="tab" data-tab="profil"><span class="tab-icon">👤</span><span>Profile</span></button>
   </nav>
 
   <div id="toast" class="toast hidden"></div>
 </div>
 
-<script src="app.js?v=14"></script>
+<script src="app.js?v=15"></script>
 </body>
 </html>
