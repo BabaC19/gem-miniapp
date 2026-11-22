@@ -12,11 +12,19 @@
  * the bot with Telegram.WebApp.sendData(), which only works because the
  * page is opened from a reply-keyboard web_app button; the bot replies
  * in chat with the result and a fresh keyboard (fresh payload).
+ *
+ * API mode: when API_BASE below is filled in (Cloudflare Worker relay
+ * deployed), actions instead travel app -> Worker -> bot and the bot
+ * answers in-app with the reply + a fresh payload, so the app is never
+ * force-closed the way sendData closes it. sendData stays as fallback.
  */
 (function () {
   "use strict";
 
   var tg = window.Telegram && window.Telegram.WebApp ? window.Telegram.WebApp : null;
+
+  // Diisi pas deploy Worker (URL https://...workers.dev). Kosong = mode sendData.
+  var API_BASE = "https://gem-api.muhamadikmal3456.workers.dev";
 
   var $ = function (id) { return document.getElementById(id); };
   var state = null;       // render state, built from the URL payload
@@ -544,12 +552,23 @@
     window.open(url, "_blank");
   }
 
-  /* ---------------- actions: sendData back to the bot ------------------ */
-  // sendData only exists for web apps opened from a reply-keyboard
-  // button; anywhere else it throws or is missing -> caller shows a hint.
-  // The app NEVER closes after a send: the bot's chat reply stays the
-  // source of truth, the UI updates optimistically (applyOptimistic),
-  // and the next open brings a fresh, exact payload.
+  /* ---------------- actions: back to the bot ------------------ */
+  // Two transports, one entry point (sendAction):
+  //
+  // 1) API relay (preferred when API_BASE is set): the action goes to
+  //    the Cloudflare Worker, the bot polls it there, runs the same
+  //    action cores as always, and answers with the one-line reply +
+  //    a FRESH payload. The payload replaces `state` wholesale, so
+  //    the still-open app stays exact — and the app is never closed,
+  //    unlike sendData, after which Telegram closes a keyboard-
+  //    launched Mini App (the bug this mode exists to fix).
+  //
+  // 2) sendData (fallback): only exists for web apps opened from a
+  //    reply-keyboard button; anywhere else it throws or is missing
+  //    -> caller shows a hint. The bot's chat reply is then the
+  //    confirmation and the next open brings a fresh payload.
+  //
+  // Either way the UI first updates optimistically (applyOptimistic).
   function sendDataOnly(obj) {
     if (!tg || typeof tg.sendData !== "function") return false;
     try {
@@ -562,8 +581,93 @@
 
   var sending = false; // in-flight guard against double-taps
 
+  var API_POLL_TRIES = 20;  // 20 x 800ms = ~16s for the bot to answer
+  var API_POLL_MS = 800;
+
+  function apiAvailable() {
+    return !!API_BASE && !!tg && !!tg.initData
+      && typeof window.fetch === "function";
+  }
+
+  function newActionId() {
+    try {
+      if (window.crypto && typeof window.crypto.randomUUID === "function") {
+        return window.crypto.randomUUID();
+      }
+    } catch (e) { /* fall through to the manual id */ }
+    return "a-" + Date.now().toString(36) + "-"
+      + Math.floor(Math.random() * 1e9).toString(36);
+  }
+
+  function apiDone(reply, payload) {
+    if (payload) {
+      var fresh = stateFromPayload(payload);
+      if (fresh) state = fresh;
+    }
+    render();
+    toast(reply || "✅ Berhasil.");
+    sending = false;
+  }
+
+  function apiFallback(obj) {
+    // The relay POST failed or no answer landed in time: deliver the
+    // action the old way. The optimistic update is already on screen;
+    // the bot re-validates everything server-side, so even if the
+    // relay copy ALSO gets processed later, the duplicate is rejected
+    // or a no-op (claims, tasks and withdrawals are all guarded).
+    if (sendDataOnly(obj)) {
+      toast("⚠️ Koneksi API gagal — hasil dikirim lewat chat.");
+    } else {
+      toast("⚠️ Koneksi lagi bermasalah — coba lagi ya.");
+    }
+    sending = false;
+  }
+
+  function apiPoll(id, obj, triesLeft) {
+    window.fetch(API_BASE + "/result/" + encodeURIComponent(id))
+      .then(function (r) { return r.json(); })
+      .then(function (res) {
+        if (res && res.status === "done") {
+          apiDone(res.reply, res.payload);
+          return;
+        }
+        throw new Error("pending");
+      })
+      .catch(function () {
+        if (triesLeft > 1) {
+          setTimeout(function () { apiPoll(id, obj, triesLeft - 1); }, API_POLL_MS);
+        } else {
+          apiFallback(obj);
+        }
+      });
+  }
+
+  function apiSend(obj) {
+    var id = newActionId();
+    window.fetch(API_BASE + "/action", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: id, initData: tg.initData, data: obj })
+    }).then(function (r) {
+      if (!r.ok) throw new Error("relay rejected the action");
+      apiPoll(id, obj, API_POLL_TRIES);
+    }).catch(function () {
+      apiFallback(obj);
+    });
+  }
+
   function sendAction(obj, applyFn) {
     if (sending) return true; // a send is already landing; swallow the tap
+    if (apiAvailable()) {
+      // Relay path: paint the optimistic update now; the bot's reply
+      // toast + fresh payload land when the poll completes. The
+      // in-flight flag stays up until then so actions can't interleave.
+      sending = true;
+      if (applyFn) applyFn();
+      render();
+      apiSend(obj);
+      return true;
+    }
     if (!sendDataOnly(obj)) return false;
     sending = true;
     if (applyFn) applyFn();
@@ -718,10 +822,11 @@
   function onWalletConnected(wallet) {
     var addr = friendlyAddress(wallet);
     if (state.wallet === addr) return; // already synced with the bot
-    if (sendDataOnly({ action: "wallet", address: addr })) {
+    if (sendAction({ action: "wallet", address: addr }, function () {
       state.wallet = addr;
       state.walletVerified = false;
       state.walletPending = false;
+    })) {
       renderWallet();
       haptic("success");
       walletNote("✅ Alamat terkirim — tersimpan di bot. Buka lagi Mini App-nya buat langkah verifikasi wallet ya. 🛡️");
@@ -760,8 +865,9 @@
       return;
     }
     Promise.resolve(sent).then(function () {
-      if (sendDataOnly({ action: "verify_sent" })) {
+      if (sendAction({ action: "verify_sent" }, function () {
         state.walletPending = true;
+      })) {
         renderWallet();
         haptic("success");
         walletNote("⏳ Pembayaran terkirim — lagi dicek di jaringan. Bot bakal ngabarin di chat kalo wallet kamu udah terverifikasi. 🛡️");
@@ -797,11 +903,12 @@
         if (p && typeof p.catch === "function") p.catch(function () {});
       } catch (e) { /* best-effort */ }
     }
-    if (sendDataOnly({ action: "wallet_disconnect" })) {
+    if (sendAction({ action: "wallet_disconnect" }, function () {
       state.wallet = null;
       state.walletVerified = false;
       state.walletPending = false;
       state.verify = null;
+    })) {
       renderWallet();
       walletNote("✅ Wallet diputuskan — alamatmu dihapus dari bot.");
     } else {
