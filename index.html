@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>GEM Mining</title>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
-<script defer src="tonconnect-ui.min.js?v=30"></script>
-<link rel="stylesheet" href="style.css?v=30">
+<script defer src="tonconnect-ui.min.js?v=31"></script>
+<link rel="stylesheet" href="style.css?v=31">
 </head>
 <body>
 
@@ -144,11 +144,11 @@
       </div>
 
       <div class="mine-amount"><span id="mineAccruedBig">0</span> <span class="mine-unit">GEM</span></div>
-      <p class="mine-timer" id="mineTimer">Sessions run 8 hours ⏳</p>
+      <p class="mine-timer" id="mineTimer">Sessions run 24 hours ⏳</p>
 
       <!-- state: idle -->
       <div id="miningIdle" class="mining-box">
-        <p>One session runs <b>8 hours</b> and earns
+        <p>One session runs <b>24 hours</b> and earns
            <b id="idleFull">116.67 GEM</b>. Free, no capital needed — just start,
            then come back later to claim.</p>
         <button id="btnStart" class="btn btn-primary btn-big">⛏️ Start Mining</button>
@@ -157,8 +157,6 @@
 
       <!-- state: running -->
       <div id="miningRunning" class="mining-box hidden">
-        <div class="progress-track"><div id="progressBar" class="progress-bar"></div></div>
-        <div class="progress-pct" id="progressPct">0%</div>
         <button id="btnEarlyClaim" class="btn btn-claim btn-early" disabled>Claim (min. 1 GEM)</button>
         <p class="mining-hint">Collected 1 GEM already? Claim it now —
            your session keeps running and the rest keeps mining. You can
@@ -360,6 +358,6 @@
   <div id="toast" class="toast hidden"></div>
 </div>
 
-<script src="app.js?v=30"></script>
+<script src="app.js?v=31"></script>
 </body>
 </html>

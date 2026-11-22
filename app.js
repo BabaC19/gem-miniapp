@@ -173,7 +173,7 @@
     if (!s) {
       mStatus.textContent = "● Ready";
       mStatus.className = "mine-status ready";
-      $("mineTimer").textContent = "Sessions run 8 hours ⏳";
+      $("mineTimer").textContent = "Sessions run 24 hours ⏳";
       $("mineAccruedBig").textContent = fmtPoints(state.idleFull || 0);
     } else if (s.claimable && s.stopped) {
       mStatus.textContent = "● Stopped";
@@ -286,8 +286,6 @@
     s.accrued = accrued;
 
     setRing(frac);
-    $("progressBar").style.width = (frac * 100).toFixed(1) + "%";
-    $("progressPct").textContent = Math.floor(frac * 100) + "%";
     $("mineAccruedBig").textContent = fmtLive(accrued);
     $("mineTimer").textContent = "⏳ Mining ends in " + fmtDuration(s.end_ts - now);
 
