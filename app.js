@@ -112,6 +112,8 @@
         last_claim_ts: Number(p.session.last_claim_ts) || Number(p.session.start_ts),
         min_claim: Number(p.session.min_claim) || 1,
         claimable: Date.now() / 1000 >= Number(p.session.end_ts),
+        stopped: !!p.session.stopped,
+        claim_deadline_ts: p.session.claim_deadline_ts ? Number(p.session.claim_deadline_ts) : null,
         accrued: 0
       };
       session.accrued = accruedOf(session, sRate, sFull);
@@ -180,6 +182,11 @@
       mStatus.className = "mine-status ready";
       $("mineTimer").textContent = "Sessions run 8 hours ⏳";
       $("mineAccruedBig").textContent = fmtPoints(state.idleFull || 0);
+    } else if (s.claimable && s.stopped) {
+      mStatus.textContent = "● Stopped";
+      mStatus.className = "mine-status done";
+      $("mineTimer").textContent = "⏸ Mining stopped — claim to run again";
+      $("mineAccruedBig").textContent = fmtPoints(s.accrued);
     } else if (s.claimable) {
       mStatus.textContent = "● Complete";
       mStatus.className = "mine-status done";
@@ -195,6 +202,13 @@
     if (s && s.claimable) {
       $("doneAmount").textContent = fmtPoints(s.accrued) + " GEM";
       $("claimAmount").textContent = fmtPoints(s.accrued);
+      if (s.stopped) {
+        $("claimNote").textContent = "⏸ This session wasn't claimed within 48 hours, so mining stopped. Your GEM is safe — claim it and mining runs again.";
+      } else if (s.claim_deadline_ts) {
+        $("claimNote").textContent = "⏰ Claim within " + fmtDuration(Math.max(0, s.claim_deadline_ts - Date.now() / 1000)) + " — mining stops 48 hours after the session ends.";
+      } else {
+        $("claimNote").textContent = "";
+      }
       setRing(1);
     } else if (s) {
       tick(); // paints progress immediately; interval keeps it live
@@ -371,6 +385,15 @@
       holdTxt = " You must hold at least " + Math.round(wd.hold_ratio * 100)
         + "% of the amount as GEM in your wallet (your wallet now holds "
         + fmtId(wd.holdings || 0) + " GEM).";
+    }
+    if (wd && wd.next_withdraw_ts) {
+      var cdLeft = Number(wd.next_withdraw_ts) - Date.now() / 1000;
+      if (cdLeft > 0) {
+        var cdH = Math.floor(cdLeft / 3600);
+        var cdM = Math.floor((cdLeft % 3600) / 60);
+        holdTxt += " One withdraw per 24 hours — next available in "
+          + cdH + "h " + cdM + "m.";
+      }
     }
     $("wdMinNote").textContent = "Minimum withdraw is " + fmtId(min) + " GEM." + holdTxt;
 
@@ -1107,7 +1130,7 @@
     var verEl = document.getElementById("appVersion");
     if (!verEl) return;
     var prev = readDiag();
-    verEl.textContent = "GEM Mining v22 • mode "
+    verEl.textContent = "GEM Mining v24 • mode "
       + (apiAvailable() ? "API" : ("OFFLINE (" + apiWhy() + ")"))
       + (prev ? " • prev: " + prev : "");
   }
