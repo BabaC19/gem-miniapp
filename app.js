@@ -366,7 +366,13 @@
     var min = wd && wd.min ? Number(wd.min) : 7500;
     $("wdBalance").textContent = fmtId(state.balance) + " GEM";
     $("wdAddress").textContent = state.wallet ? shortAddr(state.wallet) : "—";
-    $("wdMinNote").textContent = "Minimum withdraw is " + fmtId(min) + " GEM.";
+    var holdTxt = "";
+    if (wd && wd.hold_ratio) {
+      holdTxt = " You must hold at least " + Math.round(wd.hold_ratio * 100)
+        + "% of the amount as GEM in your wallet (your wallet now holds "
+        + fmtId(wd.holdings || 0) + " GEM).";
+    }
+    $("wdMinNote").textContent = "Minimum withdraw is " + fmtId(min) + " GEM." + holdTxt;
 
     var pending = wd && wd.pending ? wd.pending : null;
     $("wdForm").classList.toggle("hidden", !!pending);
@@ -432,7 +438,12 @@
     { level: 2, threshold: 500, multiplier: 1.5, per_day: BASE_DAILY_GEM * 1.5 },
     { level: 3, threshold: 2000, multiplier: 2, per_day: BASE_DAILY_GEM * 2 },
     { level: 4, threshold: 5000, multiplier: 3, per_day: BASE_DAILY_GEM * 3 },
-    { level: 5, threshold: 10000, multiplier: 5, per_day: BASE_DAILY_GEM * 5 }
+    { level: 5, threshold: 10000, multiplier: 5, per_day: BASE_DAILY_GEM * 5 },
+    { level: 6, threshold: 25000, multiplier: 6, per_day: BASE_DAILY_GEM * 6 },
+    { level: 7, threshold: 50000, multiplier: 8, per_day: BASE_DAILY_GEM * 8 },
+    { level: 8, threshold: 100000, multiplier: 10, per_day: BASE_DAILY_GEM * 10 },
+    { level: 9, threshold: 250000, multiplier: 12, per_day: BASE_DAILY_GEM * 12 },
+    { level: 10, threshold: 500000, multiplier: 15, per_day: BASE_DAILY_GEM * 15 }
   ];
 
   function renderLevelTable(lv) {
@@ -1096,7 +1107,7 @@
     var verEl = document.getElementById("appVersion");
     if (!verEl) return;
     var prev = readDiag();
-    verEl.textContent = "GEM Mining v21 • mode "
+    verEl.textContent = "GEM Mining v22 • mode "
       + (apiAvailable() ? "API" : ("OFFLINE (" + apiWhy() + ")"))
       + (prev ? " • prev: " + prev : "");
   }
