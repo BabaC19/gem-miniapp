@@ -654,7 +654,9 @@
       if (fresh) state = fresh;
     }
     render();
-    toast(reply || "✅ Berhasil.");
+    // An empty reply means "render silently" — the bootstrap action
+    // answers with one, and the app must come up without a toast.
+    if (reply) toast(reply);
     sending = false;
   }
 
@@ -669,7 +671,7 @@
     // of the API path is visible instead of silent.
     noteDiag("API gagal: " + (why || "nggak diketahui"));
     var verEl = document.getElementById("appVersion");
-    if (verEl) verEl.textContent = "GEM Mining v10 • API GAGAL: " + (why || "?");
+    if (verEl) verEl.textContent = "GEM Mining v11 • API GAGAL: " + (why || "?");
     toast("⚠️ Koneksi API gagal — hasil dikirim lewat chat.");
     setTimeout(function () {
       if (!sendDataOnly(obj)) {
@@ -710,6 +712,55 @@
     }).catch(function (e) {
       apiFallback(obj, "POST /action gagal: " + (e && e.message ? e.message : e));
     });
+  }
+
+  /* Direct-entry bootstrap: the page was opened from the chat Menu
+   * Button, which launches the bare URL — no signed payload fragment
+   * — but DOES carry initData. Ask the relay for our state with the
+   * side-effect-free "bootstrap" action; the fresh payload in the
+   * result renders the app exactly like a payload launch (and the
+   * bot's empty reply means no toast). Unlike normal actions there
+   * is NO sendData fallback here: sendData cannot work before the
+   * app has state, so any failure lands on the blocked screen. */
+  function apiBootstrap() {
+    var id = newActionId();
+    window.fetch(API_BASE + "/action", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        id: id, initData: tg.initData, data: { action: "bootstrap" }
+      })
+    }).then(function (r) {
+      if (!r.ok) { showScreen("blocked"); return; }
+      apiPollBootstrap(id, API_POLL_TRIES);
+    }).catch(function () {
+      showScreen("blocked");
+    });
+  }
+
+  function apiPollBootstrap(id, triesLeft) {
+    window.fetch(API_BASE + "/result/" + encodeURIComponent(id))
+      .then(function (r) { return r.json(); })
+      .then(function (res) {
+        if (res && res.status === "done") {
+          if (!res.payload) { showScreen("blocked"); return; }
+          apiDone(res.reply, res.payload);
+          stampVersion();
+          showScreen("app");
+          startTicker();
+          return;
+        }
+        throw new Error("pending");
+      })
+      .catch(function () {
+        if (triesLeft > 1) {
+          setTimeout(function () {
+            apiPollBootstrap(id, triesLeft - 1);
+          }, API_POLL_MS);
+        } else {
+          showScreen("blocked");
+        }
+      });
   }
 
   function sendAction(obj, applyFn) {
@@ -1027,21 +1078,33 @@
     applyTheme();
   }
 
-  var payload = parsePayload();
-  if (!payload) {
-    // No (valid) state snapshot: the page was opened directly or the link
-    // is stale — it must be launched from the bot's 🎮 Main GEM button.
-    showScreen("blocked");
-    return;
-  }
-  state = stateFromPayload(payload);
-  var verEl = document.getElementById("appVersion");
-  if (verEl) {
+  function stampVersion() {
+    var verEl = document.getElementById("appVersion");
+    if (!verEl) return;
     var prev = readDiag();
-    verEl.textContent = "GEM Mining v10 • mode "
+    verEl.textContent = "GEM Mining v11 • mode "
       + (apiAvailable() ? "API" : ("CHAT (" + apiWhy() + ")"))
       + (prev ? " • lalu: " + prev : "");
   }
+
+  var payload = parsePayload();
+  if (!payload) {
+    // No (valid) state snapshot in the URL. Two ways to land here:
+    // a direct or stale link — the blocked screen, as before — or a
+    // launch from the chat Menu Button, which opens the bare page
+    // with no fragment but DOES carry initData. In API mode that is
+    // enough: bootstrap the state over the relay and come up exactly
+    // like a payload launch. Without the relay, blocked it is.
+    if (apiAvailable()) {
+      showScreen("loading");
+      apiBootstrap();
+    } else {
+      showScreen("blocked");
+    }
+    return;
+  }
+  state = stateFromPayload(payload);
+  stampVersion();
   showScreen("app");
   render();
   startTicker();
