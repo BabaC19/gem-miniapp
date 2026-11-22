@@ -174,6 +174,21 @@
     $("miningIdle").classList.toggle("hidden", !!s);
     $("miningRunning").classList.toggle("hidden", !s || s.claimable);
     $("miningDone").classList.toggle("hidden", !s || !s.claimable);
+    var mStatus = $("mineStatus");
+    if (!s) {
+      mStatus.textContent = "● Ready";
+      mStatus.className = "mine-status ready";
+      $("mineTimer").textContent = "Sessions run 8 hours ⏳";
+      $("mineAccruedBig").textContent = fmtPoints(state.idleFull || 0);
+    } else if (s.claimable) {
+      mStatus.textContent = "● Complete";
+      mStatus.className = "mine-status done";
+      $("mineTimer").textContent = "🎉 Session complete — claim your GEM";
+      $("mineAccruedBig").textContent = fmtPoints(s.accrued);
+    } else {
+      mStatus.textContent = "● Running";
+      mStatus.className = "mine-status running";
+    }
     document.body.classList.toggle("is-mining", !!s && !s.claimable);
     document.body.classList.toggle("is-done", !!s && s.claimable);
 
@@ -264,10 +279,8 @@
     setRing(frac);
     $("progressBar").style.width = (frac * 100).toFixed(1) + "%";
     $("progressPct").textContent = Math.floor(frac * 100) + "%";
-    $("statAccrued").textContent = fmtLive(accrued) + " GEM";
-    $("statElapsed").textContent = fmtDuration(elapsed);
-    $("statRemaining").textContent = fmtDuration(s.end_ts - now);
-    $("statTarget").textContent = fmtPoints(s.full_amount) + " GEM";
+    $("mineAccruedBig").textContent = fmtLive(accrued);
+    $("mineTimer").textContent = "⏳ Mining ends in " + fmtDuration(s.end_ts - now);
 
     // Early-claim button: live amount, enabled once it reaches the
     // session's minimum (1 GEM); the bot re-checks server-side anyway.
@@ -475,6 +488,27 @@
     if (state.idleFull != null) {
       $("idleFull").textContent = fmtPoints(state.idleFull) + " GEM";
     }
+    // Mine-tab widgets (Rifty-style home): stat row, multiplier badge,
+    // next-level card.
+    var perDay = lv.rate_per_day || (Number(lv.rate_per_hour) || BASE_RATE) * 24;
+    $("statHourly").textContent = fmtPoints(perDay / 24);
+    $("statDaily").textContent = fmtPoints(perDay);
+    $("statBoost").textContent = "×" + fmtPoints(lv.multiplier);
+    $("statLevel").textContent = "Lv " + lv.level;
+    $("mineMultBadge").textContent = "⚡ ×" + fmtPoints(lv.multiplier);
+    $("nlBadge").textContent = "Lv " + lv.level;
+    $("nlBar").style.width = (frac * 100).toFixed(1) + "%";
+    if (lv.next_level) {
+      $("nlTitle").textContent = "Next Level: " + lv.next_level;
+      $("nlText").textContent = fmtPoints(lv.holdings || 0) + " / "
+        + fmtPoints(lv.next_threshold) + " GEM";
+      $("nlNote").textContent = "Hold " + fmtPoints(lv.next_threshold)
+        + " GEM in your wallet to reach Level " + lv.next_level;
+    } else {
+      $("nlTitle").textContent = "Max Level 🔥";
+      $("nlText").textContent = fmtPoints(lv.holdings || 0) + " GEM";
+      $("nlNote").textContent = "You hold the highest multiplier!";
+    }
   }
 
   /* ---------------- tasks ---------------- */
@@ -491,6 +525,12 @@
     if (!list) return;
     list.innerHTML = "";
     var tasks = state.tasks || [];
+    var mc = $("missionCount");
+    if (mc) {
+      mc.textContent = tasks.filter(function (t) {
+        return t.state === "ready";
+      }).length;
+    }
     if (!tasks.length) {
       var empty = document.createElement("p");
       empty.className = "muted";
@@ -1023,6 +1063,22 @@
     });
   });
 
+  /* Home widgets that jump to another tab (mission center, tiles). */
+  document.querySelectorAll("[data-goto]").forEach(function (el) {
+    el.addEventListener("click", function () {
+      var btn = document.querySelector(
+        '.tab[data-tab="' + el.getAttribute("data-goto") + '"]');
+      if (btn) btn.click();
+    });
+  });
+  var tileBuy = $("tileBuy");
+  if (tileBuy) {
+    tileBuy.addEventListener("click", function () {
+      haptic("tap");
+      openExternal("https://app.ston.fi/swap?ft=TON&tt=EQAV2pGBOzyVaSagkbrc5otgPQCuUD2VYmmBXXPOo2u9Nzvv");
+    });
+  }
+
   /* ---------------- boot ---------------- */
   function applyTheme() {
     /* Fixed cosmic theme: the app does NOT adopt Telegram's palette. */
@@ -1040,7 +1096,7 @@
     var verEl = document.getElementById("appVersion");
     if (!verEl) return;
     var prev = readDiag();
-    verEl.textContent = "GEM Mining v20 • mode "
+    verEl.textContent = "GEM Mining v21 • mode "
       + (apiAvailable() ? "API" : ("OFFLINE (" + apiWhy() + ")"))
       + (prev ? " • prev: " + prev : "");
   }

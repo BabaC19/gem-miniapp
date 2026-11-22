@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>GEM Mining</title>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
-<script defer src="tonconnect-ui.min.js?v=20"></script>
-<link rel="stylesheet" href="style.css?v=20">
+<script defer src="tonconnect-ui.min.js?v=21"></script>
+<link rel="stylesheet" href="style.css?v=21">
 </head>
 <body>
 
@@ -92,7 +92,7 @@
 
   <header class="topbar">
     <div class="brand">
-      <span class="brand-gem">💎</span>
+      <img class="brand-logo" src="https://gem-assets.muhamadikmal3456.workers.dev/gem-logo-256.png" alt="GEM">
       <div class="brand-text">
         <span class="brand-name">GEM MINING</span>
         <span class="brand-sub">Free GEM mining on TON</span>
@@ -102,15 +102,31 @@
   </header>
 
   <section class="balance-card">
-    <span class="balance-label">Your balance</span>
-    <div class="balance-value"><span id="balanceValue">0</span> <span class="balance-unit">GEM</span></div>
-    <span class="balance-note">Your GEM will be sent to your TON wallet at distribution 💎</span>
+    <span class="bal-icon">💎</span>
+    <div class="bal-main">
+      <span class="balance-label">App Balance</span>
+      <div class="balance-value"><span id="balanceValue">0</span> <span class="balance-unit">GEM</span></div>
+    </div>
+    <span class="bal-chev">›</span>
   </section>
 
   <main class="panels">
 
     <!-- ⛏️ MINE -->
     <section id="panel-mine" class="panel active">
+
+      <div class="hero">
+        <div class="hero-title">GEM MINING</div>
+        <div class="hero-sub">Official Web3 App</div>
+        <div class="hero-tag">Mine · Claim · Level Up · Earn</div>
+      </div>
+
+      <div class="mine-card">
+      <div class="mine-head">
+        <span class="mine-title">⛏️ Mining</span>
+        <span class="mine-status ready" id="mineStatus">● Ready</span>
+        <span class="mine-mult" id="mineMultBadge">⚡ ×1</span>
+      </div>
 
       <div class="gem-stage">
         <div class="ring-wrap">
@@ -119,43 +135,7 @@
             <circle class="ring-fg" id="ringFg" cx="110" cy="110" r="100"></circle>
           </svg>
           <div class="gem-orbit">
-            <svg id="gemSvg" class="gem-svg" viewBox="0 0 200 200" role="img" aria-label="Permata GEM">
-              <defs>
-                <linearGradient id="facetTop" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0" stop-color="#a7f3d0"/>
-                  <stop offset="1" stop-color="#34d399"/>
-                </linearGradient>
-                <linearGradient id="facetLeft" x1="0" y1="0" x2="1" y2="1">
-                  <stop offset="0" stop-color="#6ee7b7"/>
-                  <stop offset="1" stop-color="#059669"/>
-                </linearGradient>
-                <linearGradient id="facetRight" x1="1" y1="0" x2="0" y2="1">
-                  <stop offset="0" stop-color="#5eead4"/>
-                  <stop offset="1" stop-color="#0d9488"/>
-                </linearGradient>
-                <linearGradient id="facetBottom" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0" stop-color="#10b981"/>
-                  <stop offset="1" stop-color="#065f46"/>
-                </linearGradient>
-              </defs>
-              <g class="gem-body">
-                <polygon points="100,168 38,74 162,74" fill="url(#facetBottom)"/>
-                <polygon points="100,168 38,74 100,74" fill="url(#facetLeft)" opacity="0.92"/>
-                <polygon points="100,168 162,74 100,74" fill="url(#facetRight)" opacity="0.92"/>
-                <polygon points="38,74 62,34 138,34 162,74" fill="url(#facetTop)"/>
-                <polygon points="62,34 84,74 38,74" fill="#d1fae5" opacity="0.85"/>
-                <polygon points="138,34 162,74 116,74" fill="#99f6e4" opacity="0.8"/>
-                <polygon points="62,34 138,34 116,74 84,74" fill="#ecfdf5" opacity="0.95"/>
-                <polyline points="38,74 162,74" stroke="#ecfdf5" stroke-width="2" opacity="0.7" fill="none"/>
-                <polyline points="62,34 84,74 100,168" stroke="#ecfdf5" stroke-width="1.4" opacity="0.45" fill="none"/>
-                <polyline points="138,34 116,74 100,168" stroke="#ecfdf5" stroke-width="1.4" opacity="0.45" fill="none"/>
-              </g>
-              <g class="sparkles" fill="#fef9c3">
-                <path class="spark s1" d="M160 26 l2.6 6.4 6.4 2.6 -6.4 2.6 -2.6 6.4 -2.6 -6.4 -6.4 -2.6 6.4 -2.6z"/>
-                <path class="spark s2" d="M34 108 l2 5 5 2 -5 2 -2 5 -2 -5 -5 -2 5 -2z"/>
-                <path class="spark s3" d="M168 120 l1.6 4 4 1.6 -4 1.6 -1.6 4 -1.6 -4 -4 -1.6 4 -1.6z"/>
-              </g>
-            </svg>
+            <div class="gem-img" role="img" aria-label="GEM"></div>
             <span class="orbit-particle p1"></span>
             <span class="orbit-particle p2"></span>
             <span class="orbit-particle p3"></span>
@@ -163,9 +143,11 @@
         </div>
       </div>
 
+      <div class="mine-amount"><span id="mineAccruedBig">0</span> <span class="mine-unit">GEM</span></div>
+      <p class="mine-timer" id="mineTimer">Sessions run 8 hours ⏳</p>
+
       <!-- state: idle -->
       <div id="miningIdle" class="mining-box">
-        <h2>Ready to mine? ⛏️</h2>
         <p>One session runs <b>8 hours</b> and earns
            <b id="idleFull">116.67 GEM</b>. Free, no capital needed — just start,
            then come back later to claim.</p>
@@ -175,15 +157,8 @@
 
       <!-- state: running -->
       <div id="miningRunning" class="mining-box hidden">
-        <h2>Mining in progress… ⛏️</h2>
         <div class="progress-track"><div id="progressBar" class="progress-bar"></div></div>
         <div class="progress-pct" id="progressPct">0%</div>
-        <div class="stat-grid">
-          <div class="stat"><span class="stat-label">💎 Collected</span><span class="stat-value" id="statAccrued">0</span></div>
-          <div class="stat"><span class="stat-label">⏱️ Elapsed</span><span class="stat-value" id="statElapsed">0s</span></div>
-          <div class="stat"><span class="stat-label">⌛ Time left</span><span class="stat-value" id="statRemaining">8h</span></div>
-          <div class="stat"><span class="stat-label">🎯 Session target</span><span class="stat-value" id="statTarget">116.67 GEM</span></div>
-        </div>
         <button id="btnEarlyClaim" class="btn btn-claim btn-early" disabled>Claim (min. 1 GEM)</button>
         <p class="mining-hint">Collected 1 GEM already? Claim it now —
            your session keeps running and the rest keeps mining. You can
@@ -199,12 +174,52 @@
         <p class="mining-hint">Your GEM is confirmed in the bot chat. 💬</p>
       </div>
 
+      </div><!-- /mine-card -->
+
+      <div class="stat-row">
+        <div class="mini-stat"><span class="mini-label">⚡ Hourly</span><span class="mini-value mv-hourly" id="statHourly">14.6</span><span class="mini-sub">GEM/h</span></div>
+        <div class="mini-stat"><span class="mini-label">📅 Daily</span><span class="mini-value mv-daily" id="statDaily">350</span><span class="mini-sub">GEM/day</span></div>
+        <div class="mini-stat"><span class="mini-label">📈 Boost</span><span class="mini-value mv-boost" id="statBoost">×1</span><span class="mini-sub">multiplier</span></div>
+        <div class="mini-stat"><span class="mini-label">🛡️ Level</span><span class="mini-value mv-level" id="statLevel">Lv 1</span><span class="mini-sub">wallet</span></div>
+      </div>
+
+      <div class="nl-card" data-goto="boost">
+        <div class="nl-badge" id="nlBadge">Lv 1</div>
+        <div class="nl-main">
+          <div class="nl-head"><span id="nlTitle">Next Level: 2</span><span id="nlText">0 / 500 GEM</span></div>
+          <div class="level-progress"><div id="nlBar" class="level-bar"></div></div>
+          <p class="nl-note" id="nlNote">Hold 500 GEM in your wallet to reach Level 2</p>
+        </div>
+        <span class="chev">›</span>
+      </div>
+
+      <button class="mission-card" data-goto="task">
+        <span class="mission-icon">🎯</span>
+        <span class="mission-main">
+          <span class="mission-title">Mission Center</span>
+          <span class="mission-desc">Complete tasks and join the community to earn GEM</span>
+        </span>
+        <span class="mission-count" id="missionCount">0</span>
+        <span class="chev">›</span>
+      </button>
+
+      <div class="tiles">
+        <button class="tile tile-a" data-goto="boost">
+          <span class="tile-title">🚀 Boost</span>
+          <span class="tile-desc">Level up your mining multiplier</span>
+        </button>
+        <button class="tile tile-b" id="tileBuy">
+          <span class="tile-title">💎 Buy GEM</span>
+          <span class="tile-desc">Get GEM on STON.fi</span>
+        </button>
+      </div>
+
       <p id="miningError" class="error hidden"></p>
     </section>
 
     <!-- ✅ TASK -->
     <section id="panel-task" class="panel">
-      <h2 class="panel-title">📋 Tasks</h2>
+      <div class="panel-hero ph-task"><span>📋 Tasks</span></div>
       <p class="muted">Complete tasks to collect bonus GEM.
          After you claim, the result appears in the bot chat. 💬</p>
       <div id="taskList" class="task-list"></div>
@@ -212,7 +227,7 @@
 
     <!-- 🚀 BOOST (level / pengkali mining) -->
     <section id="panel-boost" class="panel">
-      <h2 class="panel-title">🚀 Boost</h2>
+      <div class="panel-hero ph-boost"><span>🚀 Boost</span></div>
 
       <!-- ⭐ LEVEL: pengkali dari GEM yang disimpan di wallet TON -->
       <div class="level-card" id="levelCard">
@@ -237,7 +252,7 @@
 
     <!-- 👥 FRIENDS (referral) -->
     <section id="panel-friends" class="panel">
-      <h2 class="panel-title">👥 Referral</h2>
+      <div class="panel-hero ph-friends"><span>👥 Referral</span></div>
       <p>Invite your friends to mine GEM! When a friend verifies their
          wallet (0.05 TON) and makes their first claim, you earn
          <b>+25 GEM</b> (once per friend). And once a friend holds
@@ -260,7 +275,7 @@
 
     <!-- 👤 PROFIL (profil + wallet) -->
     <section id="panel-profil" class="panel">
-      <h2 class="panel-title">👤 Profile</h2>
+      <div class="panel-hero ph-profil"><span>👤 Profile</span></div>
 
       <!-- 👤 PROFILE HEADER + STATS -->
       <div class="profile-card" id="profileCard">
@@ -329,7 +344,7 @@
         </div>
         <p id="wdNote" class="wallet-note hidden"></p>
       </div>
-      <p class="app-version" id="appVersion">GEM Mining v20</p>
+      <p class="app-version" id="appVersion">GEM Mining v21</p>
     </section>
   </main>
 
@@ -344,6 +359,6 @@
   <div id="toast" class="toast hidden"></div>
 </div>
 
-<script src="app.js?v=20"></script>
+<script src="app.js?v=21"></script>
 </body>
 </html>
