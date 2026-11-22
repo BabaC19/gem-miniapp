@@ -630,7 +630,25 @@
       + Math.floor(Math.random() * 1e9).toString(36);
   }
 
+  // Persistent one-line diagnostic (survives the app closing on the
+  // sendData fallback): the stamp on next open shows what happened.
+  function noteDiag(text) {
+    try { window.localStorage.setItem("gemDiag", text); } catch (e) {}
+  }
+  function readDiag() {
+    try { return window.localStorage.getItem("gemDiag") || ""; }
+    catch (e) { return ""; }
+  }
+  function apiWhy() {
+    if (!API_BASE) return "API_BASE kosong";
+    if (!tg) return "Telegram object nggak ada";
+    if (!tg.initData) return "initData kosong";
+    if (typeof window.fetch !== "function") return "fetch nggak ada";
+    return "";
+  }
+
   function apiDone(reply, payload) {
+    noteDiag("API ok");
     if (payload) {
       var fresh = stateFromPayload(payload);
       if (fresh) state = fresh;
@@ -640,7 +658,7 @@
     sending = false;
   }
 
-  function apiFallback(obj) {
+  function apiFallback(obj, why) {
     // The relay POST failed or no answer landed in time: deliver the
     // action the old way. The optimistic update is already on screen;
     // the bot re-validates everything server-side, so even if the
@@ -649,8 +667,9 @@
     // The toast + stamp are held on screen for a moment BEFORE the
     // sendData fallback fires (sendData closes the app), so a failure
     // of the API path is visible instead of silent.
+    noteDiag("API gagal: " + (why || "nggak diketahui"));
     var verEl = document.getElementById("appVersion");
-    if (verEl) verEl.textContent = "GEM Mining v9 • API GAGAL — jatuh ke mode chat";
+    if (verEl) verEl.textContent = "GEM Mining v10 • API GAGAL: " + (why || "?");
     toast("⚠️ Koneksi API gagal — hasil dikirim lewat chat.");
     setTimeout(function () {
       if (!sendDataOnly(obj)) {
@@ -674,7 +693,7 @@
         if (triesLeft > 1) {
           setTimeout(function () { apiPoll(id, obj, triesLeft - 1); }, API_POLL_MS);
         } else {
-          apiFallback(obj);
+          apiFallback(obj, "timeout — bot nggak jawab hasil");
         }
       });
   }
@@ -686,10 +705,10 @@
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id: id, initData: tg.initData, data: obj })
     }).then(function (r) {
-      if (!r.ok) throw new Error("relay rejected the action");
+      if (!r.ok) { apiFallback(obj, "relay nolak (HTTP " + r.status + ")"); return; }
       apiPoll(id, obj, API_POLL_TRIES);
-    }).catch(function () {
-      apiFallback(obj);
+    }).catch(function (e) {
+      apiFallback(obj, "POST /action gagal: " + (e && e.message ? e.message : e));
     });
   }
 
@@ -705,6 +724,7 @@
       apiSend(obj);
       return true;
     }
+    noteDiag("mode chat langsung: " + apiWhy());
     if (!sendDataOnly(obj)) return false;
     sending = true;
     if (applyFn) applyFn();
@@ -1017,8 +1037,10 @@
   state = stateFromPayload(payload);
   var verEl = document.getElementById("appVersion");
   if (verEl) {
-    verEl.textContent = "GEM Mining v9 • mode "
-      + (apiAvailable() ? "API" : (API_BASE ? "API (initData/fetch nggak ada)" : "CHAT"));
+    var prev = readDiag();
+    verEl.textContent = "GEM Mining v10 • mode "
+      + (apiAvailable() ? "API" : ("CHAT (" + apiWhy() + ")"))
+      + (prev ? " • lalu: " + prev : "");
   }
   showScreen("app");
   render();
