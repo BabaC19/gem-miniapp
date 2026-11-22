@@ -671,7 +671,7 @@
     // of the API path is visible instead of silent.
     noteDiag("API gagal: " + (why || "nggak diketahui"));
     var verEl = document.getElementById("appVersion");
-    if (verEl) verEl.textContent = "GEM Mining v11 • API GAGAL: " + (why || "?");
+    if (verEl) verEl.textContent = "GEM Mining v12 • API GAGAL: " + (why || "?");
     toast("⚠️ Koneksi API gagal — hasil dikirim lewat chat.");
     setTimeout(function () {
       if (!sendDataOnly(obj)) {
@@ -1082,7 +1082,7 @@
     var verEl = document.getElementById("appVersion");
     if (!verEl) return;
     var prev = readDiag();
-    verEl.textContent = "GEM Mining v11 • mode "
+    verEl.textContent = "GEM Mining v12 • mode "
       + (apiAvailable() ? "API" : ("CHAT (" + apiWhy() + ")"))
       + (prev ? " • lalu: " + prev : "");
   }
