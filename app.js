@@ -391,6 +391,19 @@
       }
     }
     $("wdMinNote").textContent = "Minimum withdraw is " + fmtId(min) + " GEM." + holdTxt;
+    var feeEl = $("wdFeeNote");
+    if (feeEl) {
+      var ratio = wd && wd.fee_ratio ? Number(wd.fee_ratio) : 0.03;
+      var amtEl = $("wdAmount");
+      var amt = amtEl ? parseFloat(String(amtEl.value || "").replace(",", ".")) : NaN;
+      if (amt && isFinite(amt) && amt > 0) {
+        var fee = amt * ratio;
+        feeEl.textContent = "Fee " + Math.round(ratio * 100) + "%: -" + fmtId(fee)
+          + " GEM \u00B7 You receive: " + fmtId(amt - fee) + " GEM";
+      } else {
+        feeEl.textContent = "A " + Math.round(ratio * 100) + "% fee is deducted from every withdraw.";
+      }
+    }
 
     var pending = wd && wd.pending ? wd.pending : null;
     $("wdForm").classList.toggle("hidden", !!pending);
@@ -413,6 +426,7 @@
     });
   }
 
+  $("wdAmount").addEventListener("input", function () { renderWithdraw(); });
   $("btnWithdraw").addEventListener("click", function () {
     haptic("tap");
     var min = state.withdraw && state.withdraw.min
@@ -1131,7 +1145,7 @@
     var verEl = document.getElementById("appVersion");
     if (!verEl) return;
     var prev = readDiag();
-    verEl.textContent = "GEM Mining v26 • mode "
+    verEl.textContent = "GEM Mining v27 • mode "
       + (apiAvailable() ? "API" : ("OFFLINE (" + apiWhy() + ")"))
       + (prev ? " • prev: " + prev : "");
   }
