@@ -1025,16 +1025,10 @@
 
   /* ---------------- boot ---------------- */
   function applyTheme() {
-    if (!tg || !tg.themeParams) return;
-    var tp = tg.themeParams;
-    var root = document.documentElement.style;
-    if (tp.bg_color) root.setProperty("--tg-bg", tp.bg_color);
-    if (tp.secondary_bg_color) root.setProperty("--tg-secondary-bg", tp.secondary_bg_color);
-    if (tp.text_color) root.setProperty("--tg-text", tp.text_color);
-    if (tp.hint_color) root.setProperty("--tg-hint", tp.hint_color);
-    if (tp.button_color) root.setProperty("--tg-button", tp.button_color);
-    if (tp.button_text_color) root.setProperty("--tg-button-text", tp.button_text_color);
-    try { tg.setHeaderColor("secondary_bg_color"); } catch (e) {}
+    /* Fixed cosmic theme: the app does NOT adopt Telegram's palette. */
+    if (!tg) return;
+    try { tg.setHeaderColor("#0a0618"); } catch (e) {}
+    try { tg.setBackgroundColor("#070414"); } catch (e) {}
   }
 
   if (tg) {
@@ -1046,7 +1040,7 @@
     var verEl = document.getElementById("appVersion");
     if (!verEl) return;
     var prev = readDiag();
-    verEl.textContent = "GEM Mining v18 • mode "
+    verEl.textContent = "GEM Mining v19 • mode "
       + (apiAvailable() ? "API" : ("OFFLINE (" + apiWhy() + ")"))
       + (prev ? " • prev: " + prev : "");
   }
