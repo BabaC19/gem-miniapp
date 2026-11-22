@@ -1184,7 +1184,6 @@
     return;
   }
   state = stateFromPayload(payload);
-  stampVersion();
   showScreen("app");
   render();
   startTicker();
