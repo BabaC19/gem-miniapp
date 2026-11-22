@@ -75,13 +75,6 @@
     }
   }
 
-  function accruedOf(session, rate, full) {
-    if (!session) return 0;
-    var elapsedH = Math.max(0, (Date.now() / 1000 - session.start_ts) / 3600);
-    var hours = (session.end_ts - session.start_ts) / 3600;
-    return Math.min(elapsedH, hours) * rate;
-  }
-
   /* Early-claim availability, mirroring bot.py session_available():
    * accrual since the last-claim watermark at the locked rate, capped
    * at what is left of the session target, never negative. */
@@ -116,7 +109,7 @@
         claim_deadline_ts: p.session.claim_deadline_ts ? Number(p.session.claim_deadline_ts) : null,
         accrued: 0
       };
-      session.accrued = accruedOf(session, sRate, sFull);
+      session.accrued = availableOf(session, Date.now() / 1000);
       if (session.claimable) {
         // The final claim pays only the remainder after early claims.
         session.accrued = Math.max(0, sFull - session.claimed_total);
@@ -287,7 +280,9 @@
     var total = s.end_ts - s.start_ts;
     var elapsed = Math.max(0, now - s.start_ts);
     var frac = total > 0 ? Math.min(1, elapsed / total) : 1;
-    var accrued = Math.min(elapsed / 3600, total / 3600) * (s.rate_per_hour || BASE_RATE);
+    // The big number is the UNCLAIMED amount: after a claim it restarts
+    // from ~0 and ticks up again (watermark), like the claim button.
+    var accrued = availableOf(s, now);
     s.accrued = accrued;
 
     setRing(frac);
@@ -1130,7 +1125,7 @@
     var verEl = document.getElementById("appVersion");
     if (!verEl) return;
     var prev = readDiag();
-    verEl.textContent = "GEM Mining v24 • mode "
+    verEl.textContent = "GEM Mining v25 • mode "
       + (apiAvailable() ? "API" : ("OFFLINE (" + apiWhy() + ")"))
       + (prev ? " • prev: " + prev : "");
   }
