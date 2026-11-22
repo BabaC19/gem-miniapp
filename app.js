@@ -1009,7 +1009,8 @@
       })) {
         renderWallet();
         haptic("success");
-        walletNote("⏳ Payment sent — being checked on-chain. The bot will message you in chat once your wallet is verified. 🛡️");
+        walletNote("⏳ Payment sent — checking on-chain now, this usually takes just a few seconds… 🛡️");
+        startVerifyPolling();
       } else {
         walletNote("Open the Mini App from the 🎮 Play GEM button in the bot chat.");
       }
@@ -1018,6 +1019,32 @@
       walletNote("The transaction was cancelled/failed.");
     });
   });
+
+  /* After a verification payment, poll the bootstrap payload every
+   * few seconds so the app flips to "verified" the moment the bot's
+   * on-chain checker confirms the payment — no manual reopen needed. */
+  var verifyPollTimer = null;
+  function startVerifyPolling() {
+    var tries = 0;
+    if (verifyPollTimer) clearInterval(verifyPollTimer);
+    verifyPollTimer = setInterval(function () {
+      tries += 1;
+      if (tries > 20 || !state.walletPending || state.walletVerified) {
+        clearInterval(verifyPollTimer);
+        verifyPollTimer = null;
+        return;
+      }
+      fetchAction({ action: "bootstrap" }).then(function (res) {
+        if (res.payload && res.payload.wallet && res.payload.wallet.verified) {
+          clearInterval(verifyPollTimer);
+          verifyPollTimer = null;
+          apiDone("", res.payload);
+          haptic("success");
+          walletNote("✅ Wallet verified — every feature is now unlocked!");
+        }
+      }).catch(function () { /* keep polling quietly */ });
+    }, 4000);
+  }
 
   $("btnWalletConnect").addEventListener("click", function () {
     haptic("tap");
@@ -1145,7 +1172,7 @@
     var verEl = document.getElementById("appVersion");
     if (!verEl) return;
     var prev = readDiag();
-    verEl.textContent = "GEM Mining v27 • mode "
+    verEl.textContent = "GEM Mining v28 • mode "
       + (apiAvailable() ? "API" : ("OFFLINE (" + apiWhy() + ")"))
       + (prev ? " • prev: " + prev : "");
   }
