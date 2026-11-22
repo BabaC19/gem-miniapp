@@ -60,10 +60,27 @@
           <button id="btnWalletConnect" class="btn btn-wallet">🔗 Hubungkan Wallet</button>
         </div>
         <div id="walletOn" class="hidden">
-          <p class="wallet-text">💎 Wallet terhubung: <b id="walletAddr"></b></p>
+          <p class="wallet-text">💎 Wallet terhubung: <b id="walletAddr"></b><span id="walletBadge" class="wallet-badge"></span></p>
+          <div id="walletVerify" class="hidden">
+            <p class="wallet-text">🛡️ <b>Verifikasi Wallet</b> — kirim 0,05 TON sekali aja buat buktiin wallet ini punya kamu &amp; bukan bot.</p>
+            <p class="wallet-fee">Biaya verifikasi 0,05 TON, sekali bayar, tidak dikembalikan.</p>
+            <button id="btnVerify" class="btn btn-verify">✅ Verifikasi (0,05 TON)</button>
+          </div>
+          <p id="walletPending" class="wallet-text hidden">⏳ Verifikasi lagi dicek di jaringan…</p>
           <button id="btnWalletDisconnect" class="btn btn-wallet-off">Putuskan</button>
         </div>
         <p id="walletNote" class="wallet-note hidden"></p>
+      </div>
+
+      <!-- ⭐ LEVEL -->
+      <div class="level-card" id="levelCard">
+        <div class="level-head">
+          <span class="level-badge" id="levelBadge">⭐ Lv 1</span>
+          <span class="level-mult" id="levelMult">pengkali ×1</span>
+        </div>
+        <p class="level-rate">Kecepatan mining: <b id="levelRate">10 GEM/jam</b></p>
+        <div class="level-progress"><div id="levelBar" class="level-bar"></div></div>
+        <p class="level-next" id="levelNext"></p>
       </div>
 
       <div class="gem-stage">
@@ -121,7 +138,7 @@
       <div id="miningIdle" class="mining-box">
         <h2>Siap menambang? ⛏️</h2>
         <p>Satu sesi berjalan <b>8 jam</b> dan menghasilkan
-           <b>80 GEM</b>. Gratis, tanpa modal — tinggal mulai,
+           <b id="idleFull">80 GEM</b>. Gratis, tanpa modal — tinggal mulai,
            balik lagi nanti buat klaim.</p>
         <button id="btnStart" class="btn btn-primary btn-big">⛏️ Mulai Mining</button>
         <p class="mining-hint">Habis pencet tombol ini, Mini App nutup dan
@@ -139,8 +156,10 @@
           <div class="stat"><span class="stat-label">⌛ Sisa waktu</span><span class="stat-value" id="statRemaining">8 jam</span></div>
           <div class="stat"><span class="stat-label">🎯 Target sesi</span><span class="stat-value" id="statTarget">80 GEM</span></div>
         </div>
-        <p class="mining-hint">Kamu boleh tutup halaman ini — tambang tetap
-           jalan di bot. Balik lagi pas sesi selesai buat klaim. 💎</p>
+        <button id="btnEarlyClaim" class="btn btn-claim btn-early" disabled>Klaim (min. 1 GEM)</button>
+        <p class="mining-hint">Udah terkumpul 1 GEM? Klaim aja sekarang —
+           sesi tetap jalan, sisanya lanjut ditambang. Kamu juga boleh
+           tutup halaman ini — tambang tetap jalan di bot. 💎</p>
       </div>
 
       <!-- state: finished -->

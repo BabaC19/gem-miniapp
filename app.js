@@ -71,20 +71,43 @@
     return Math.min(elapsedH, hours) * rate;
   }
 
+  /* Early-claim availability, mirroring bot.py session_available():
+   * accrual since the last-claim watermark at the locked rate, capped
+   * at what is left of the session target, never negative. */
+  function availableOf(s, now) {
+    if (!s) return 0;
+    var t = Math.min(now, s.end_ts);
+    var last = s.last_claim_ts || s.start_ts;
+    var since = (s.rate_per_hour || 10) * Math.max(0, t - last) / 3600;
+    var remaining = s.full_amount - (s.claimed_total || 0);
+    return Math.max(0, Math.min(since, remaining));
+  }
+
   function stateFromPayload(p) {
     var rate = Number(p.rate_per_hour) || 10;
     var full = Number(p.session_full) || 80;
     var session = null;
     if (p.session && p.session.start_ts && p.session.end_ts) {
+      // A running session mines at its own LOCKED rate (from when it
+      // started), which may differ from the user's current-level rate.
+      var sRate = Number(p.session.rate_per_hour) || rate;
+      var sFull = Number(p.session.full_amount) || full;
       session = {
         start_ts: Number(p.session.start_ts),
         end_ts: Number(p.session.end_ts),
-        rate_per_hour: rate,
-        full_amount: full,
+        rate_per_hour: sRate,
+        full_amount: sFull,
+        claimed_total: Number(p.session.claimed_total) || 0,
+        last_claim_ts: Number(p.session.last_claim_ts) || Number(p.session.start_ts),
+        min_claim: Number(p.session.min_claim) || 1,
         claimable: Date.now() / 1000 >= Number(p.session.end_ts),
         accrued: 0
       };
-      session.accrued = accruedOf(session, rate, full);
+      session.accrued = accruedOf(session, sRate, sFull);
+      if (session.claimable) {
+        // The final claim pays only the remainder after early claims.
+        session.accrued = Math.max(0, sFull - session.claimed_total);
+      }
     }
     var rows = (p.leaderboard || []).map(function (r, i) {
       return {
@@ -97,8 +120,13 @@
     return {
       user: { id: p.uid, first_name: p.name || "Miner" },
       balance: Number(p.balance) || 0,
-      wallet: p.wallet ? String(p.wallet) : null,
+      wallet: p.wallet && p.wallet.address ? String(p.wallet.address) : null,
+      walletVerified: !!(p.wallet && p.wallet.verified),
+      walletPending: !!(p.wallet && p.wallet.pending),
+      verify: p.verify && typeof p.verify === "object" ? p.verify : null,
       tasks: Array.isArray(p.tasks) ? p.tasks : [],
+      level: p.level && typeof p.level === "object" ? p.level : null,
+      idleFull: session ? null : full,
       session: session,
       referral: {
         link: p.referral && p.referral.link ? p.referral.link : null,
@@ -127,6 +155,7 @@
     }
 
     renderWallet();
+    renderLevel();
     renderTasks();
 
     // Mining tab: three mutually exclusive states.
@@ -222,7 +251,7 @@
       // Session over: flip to the claim state locally. The bot confirms
       // the real numbers in chat when the user taps Klaim.
       s.claimable = true;
-      s.accrued = s.full_amount;
+      s.accrued = Math.max(0, s.full_amount - (s.claimed_total || 0));
       render();
       haptic("success");
       return;
@@ -241,6 +270,20 @@
     $("statElapsed").textContent = fmtDuration(elapsed);
     $("statRemaining").textContent = fmtDuration(s.end_ts - now);
     $("statTarget").textContent = fmtPoints(s.full_amount) + " GEM";
+
+    // Early-claim button: live amount, enabled once it reaches the
+    // session's minimum (1 GEM); the bot re-checks server-side anyway.
+    var avail = availableOf(s, now);
+    var earlyBtn = $("btnEarlyClaim");
+    if (earlyBtn) {
+      if (avail >= (s.min_claim || 1)) {
+        earlyBtn.disabled = false;
+        earlyBtn.textContent = "💰 Klaim " + fmtLive(avail) + " GEM";
+      } else {
+        earlyBtn.disabled = true;
+        earlyBtn.textContent = "Klaim (min. 1 GEM)";
+      }
+    }
   }
 
   function startTicker() {
@@ -276,7 +319,41 @@
     var on = !!state.wallet;
     $("walletOff").classList.toggle("hidden", on);
     $("walletOn").classList.toggle("hidden", !on);
-    if (on) $("walletAddr").textContent = shortAddr(state.wallet);
+    if (!on) return;
+    $("walletAddr").textContent = shortAddr(state.wallet);
+    $("walletBadge").textContent = state.walletVerified ? " 🛡️ Terverifikasi" : "";
+    // Verify step: only while connected, unverified, not already
+    // pending, and the bot actually sent a verify object (it doesn't
+    // when GEM_PROJECT_WALLET is unset or right after a fresh connect
+    // in this page session — reopening the app brings a fresh payload).
+    var showVerify = !state.walletVerified && !state.walletPending && !!state.verify;
+    $("walletVerify").classList.toggle("hidden", !showVerify);
+    $("walletPending").classList.toggle(
+      "hidden", !(state.walletPending && !state.walletVerified));
+  }
+
+  /* ---------------- level card ---------------- */
+  function renderLevel() {
+    var card = $("levelCard");
+    if (!card) return;
+    var lv = state.level;
+    if (!lv) { card.classList.add("hidden"); return; }
+    card.classList.remove("hidden");
+    $("levelBadge").textContent = "⭐ Lv " + lv.level;
+    $("levelMult").textContent = "pengkali ×" + fmtPoints(lv.multiplier);
+    $("levelRate").textContent = fmtPoints(lv.rate_per_hour) + " GEM/jam";
+    var frac = Math.min(1, Math.max(0, Number(lv.progress_frac) || 0));
+    $("levelBar").style.width = (frac * 100).toFixed(1) + "%";
+    if (lv.next_level) {
+      $("levelNext").textContent = fmtPoints(state.balance) + " / "
+        + fmtPoints(lv.next_threshold) + " GEM ke Lv " + lv.next_level
+        + " — makin banyak GEM kamu simpan, makin cepat mining-nya!";
+    } else {
+      $("levelNext").textContent = "Level MAX 🔥 — pengkali tertinggi!";
+    }
+    if (state.idleFull != null) {
+      $("idleFull").textContent = fmtPoints(state.idleFull) + " GEM";
+    }
   }
 
   /* ---------------- tasks ---------------- */
@@ -411,6 +488,13 @@
     if (!sendAction("claim")) fallbackHint();
   });
 
+  // Early claim while the session runs — same "claim" action; the bot
+  // resolves early-vs-final itself from the session state.
+  $("btnEarlyClaim").addEventListener("click", function () {
+    haptic("tap");
+    if (!sendAction("claim")) fallbackHint();
+  });
+
   /* ---------------- TonConnect (wallet) ----------------
    * Headless SDK use: we render our own buttons and only borrow the
    * SDK's modal + connection state. The SDK bundle exposes
@@ -458,13 +542,59 @@
     if (state.wallet === addr) return; // already synced with the bot
     if (sendDataOnly({ action: "wallet", address: addr })) {
       state.wallet = addr;
+      state.walletVerified = false;
+      state.walletPending = false;
       renderWallet();
       haptic("success");
-      walletNote("✅ Alamat terkirim — tersimpan di bot.");
+      walletNote("✅ Alamat terkirim — tersimpan di bot. Buka lagi Mini App-nya buat langkah verifikasi wallet ya. 🛡️");
     } else {
       walletNote("Buka Mini App dari tombol 🎮 Main GEM di chat bot biar alamat wallet-mu tersimpan ya.");
     }
   }
+
+  /* Wallet verification: pay the one-time 0.05 TON fee to the project
+   * wallet with the user's "GEM-<id>" comment payload. The bot's
+   * on-chain checker matches the payment (comment + amount + sender)
+   * and flips the verified flag; here we just send the transaction and
+   * tell the bot it went out ("verify_sent"). */
+  $("btnVerify").addEventListener("click", function () {
+    haptic("tap");
+    var v = state.verify;
+    var ui = getTonConnectUI();
+    if (!v || !ui) {
+      walletNote("Langkah verifikasi belum tersedia — buka lagi Mini App-nya dari chat bot ya.");
+      return;
+    }
+    var tx = {
+      validUntil: Math.floor(Date.now() / 1000) + 300,
+      messages: [{
+        address: v.to,
+        amount: String(v.amount_nanoton),
+        payload: v.payload_boc
+      }]
+    };
+    var sent;
+    try {
+      sent = ui.sendTransaction(tx);
+    } catch (e) {
+      haptic("error");
+      walletNote("Transaksinya dibatalkan/gagal.");
+      return;
+    }
+    Promise.resolve(sent).then(function () {
+      if (sendDataOnly({ action: "verify_sent" })) {
+        state.walletPending = true;
+        renderWallet();
+        haptic("success");
+        walletNote("⏳ Pembayaran terkirim — lagi dicek di jaringan. Bot bakal ngabarin di chat kalo wallet kamu udah terverifikasi. 🛡️");
+      } else {
+        walletNote("Buka Mini App dari tombol 🎮 Main GEM di chat bot ya.");
+      }
+    }, function () {
+      haptic("error");
+      walletNote("Transaksinya dibatalkan/gagal.");
+    });
+  });
 
   $("btnWalletConnect").addEventListener("click", function () {
     haptic("tap");
@@ -491,6 +621,9 @@
     }
     if (sendDataOnly({ action: "wallet_disconnect" })) {
       state.wallet = null;
+      state.walletVerified = false;
+      state.walletPending = false;
+      state.verify = null;
       renderWallet();
       walletNote("✅ Wallet diputuskan — alamatmu dihapus dari bot.");
     } else {
