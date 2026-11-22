@@ -787,8 +787,7 @@
     fetchAction({ action: "bootstrap" }).then(function (res) {
       if (!res.payload) { bootstrapFail("session rejected by server"); return; }
       apiDone(res.reply, res.payload);
-      stampVersion();
-      showScreen("app");
+        showScreen("app");
       startTicker();
     }).catch(function (e) {
       bootstrapFail(e && e.message ? e.message : "network");
@@ -1166,15 +1165,6 @@
   if (tg) {
     try { tg.ready(); tg.expand(); } catch (e) {}
     applyTheme();
-  }
-
-  function stampVersion() {
-    var verEl = document.getElementById("appVersion");
-    if (!verEl) return;
-    var prev = readDiag();
-    verEl.textContent = "GEM Mining v28 • mode "
-      + (apiAvailable() ? "API" : ("OFFLINE (" + apiWhy() + ")"))
-      + (prev ? " • prev: " + prev : "");
   }
 
   var payload = parsePayload();
