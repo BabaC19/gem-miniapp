@@ -1027,8 +1027,8 @@
   function applyTheme() {
     /* Fixed cosmic theme: the app does NOT adopt Telegram's palette. */
     if (!tg) return;
-    try { tg.setHeaderColor("#0a0618"); } catch (e) {}
-    try { tg.setBackgroundColor("#070414"); } catch (e) {}
+    try { tg.setHeaderColor("#04120c"); } catch (e) {}
+    try { tg.setBackgroundColor("#04120c"); } catch (e) {}
   }
 
   if (tg) {
@@ -1040,7 +1040,7 @@
     var verEl = document.getElementById("appVersion");
     if (!verEl) return;
     var prev = readDiag();
-    verEl.textContent = "GEM Mining v19 • mode "
+    verEl.textContent = "GEM Mining v20 • mode "
       + (apiAvailable() ? "API" : ("OFFLINE (" + apiWhy() + ")"))
       + (prev ? " • prev: " + prev : "");
   }
