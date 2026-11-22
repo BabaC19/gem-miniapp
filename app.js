@@ -1,29 +1,24 @@
-/* GEM Mining — Mini App logic (GitHub Pages + sendData edition).
+/* GEM Mining — Mini App logic (direct API edition).
  *
- * There is NO backend server for this page. The bot embeds a signed
- * per-user state snapshot in the URL fragment when it builds the
- * 🎮 Main GEM keyboard button:
+ * The page talks to the GEM API server (API_BASE below) with plain
+ * fetch(): every action is ONE request carrying Telegram's initData,
+ * and the server answers in the same response with the one-line
+ * reply + a fresh state payload. The payload replaces `state`
+ * wholesale, so the still-open app stays exact. There is NO sendData
+ * path anymore — Telegram closes the Mini App after sendData, which
+ * was the old claim-restart bug.
  *
- *   https://<pages-url>/#s=<base64url(JSON)>&sig=<hex>
- *
- * The fragment never reaches any server. This page only *renders* that
- * payload (signature is NOT verified client-side — display only; the bot
- * re-validates every action against its database). Actions go back to
- * the bot with Telegram.WebApp.sendData(), which only works because the
- * page is opened from a reply-keyboard web_app button; the bot replies
- * in chat with the result and a fresh keyboard (fresh payload).
- *
- * API mode: when API_BASE below is filled in (Cloudflare Worker relay
- * deployed), actions instead travel app -> Worker -> bot and the bot
- * answers in-app with the reply + a fresh payload, so the app is never
- * force-closed the way sendData closes it. sendData stays as fallback.
+ * Launches: a keyboard-button launch may still carry a signed state
+ * snapshot in the URL fragment (#s=<base64url(JSON)>&sig=<hex>) for
+ * instant first paint; a Menu Button launch carries no fragment and
+ * bootstraps its state with one API call instead.
  */
 (function () {
   "use strict";
 
   var tg = window.Telegram && window.Telegram.WebApp ? window.Telegram.WebApp : null;
 
-  // Diisi pas deploy Worker (URL https://...workers.dev). Kosong = mode sendData.
+  // The GEM API server (Cloudflare Worker, synchronous backend).
   var API_BASE = "https://gem-api.muhamadikmal3456.workers.dev";
 
   /* Mining economics (mirror bot.py): the base level earns
@@ -583,55 +578,28 @@
     window.open(url, "_blank");
   }
 
-  /* ---------------- actions: back to the bot ------------------ */
-  // Two transports, one entry point (sendAction):
-  //
-  // 1) API relay (preferred when API_BASE is set): the action goes to
-  //    the Cloudflare Worker, the bot polls it there, runs the same
-  //    action cores as always, and answers with the one-line reply +
-  //    a FRESH payload. The payload replaces `state` wholesale, so
-  //    the still-open app stays exact — and the app is never closed,
-  //    unlike sendData, after which Telegram closes a keyboard-
-  //    launched Mini App (the bug this mode exists to fix).
-  //
-  // 2) sendData (fallback): only exists for web apps opened from a
-  //    reply-keyboard button; anywhere else it throws or is missing
-  //    -> caller shows a hint. The bot's chat reply is then the
-  //    confirmation and the next open brings a fresh payload.
-  //
-  // Either way the UI first updates optimistically (applyOptimistic).
-  function sendDataOnly(obj) {
-    if (!tg || typeof tg.sendData !== "function") return false;
-    try {
-      tg.sendData(JSON.stringify(obj));
-    } catch (e) {
-      return false;
-    }
-    return true;
-  }
-
+  /* ---------------- actions: back to the server ------------------ */
+  // ONE transport: a direct synchronous API call. The action goes to
+  // the API server, which validates initData, runs the action and
+  // answers IN THE SAME RESPONSE with the one-line reply + a FRESH
+  // payload. The payload replaces `state` wholesale, so the app
+  // stays exact — and nothing ever closes the app (there is no
+  // sendData path anymore: Telegram closes the Mini App after
+  // sendData, which was the old claim-restart bug). On a network
+  // failure the user just gets a toast and can tap again; the app
+  // stays open either way. The UI first updates optimistically
+  // (applyOptimistic) so taps feel instant.
   var sending = false; // in-flight guard against double-taps
 
-  var API_POLL_TRIES = 20;  // 20 x 800ms = ~16s for the bot to answer
-  var API_POLL_MS = 800;
+  var API_TIMEOUT_MS = 25000;
 
   function apiAvailable() {
     return !!API_BASE && !!tg && !!tg.initData
       && typeof window.fetch === "function";
   }
 
-  function newActionId() {
-    try {
-      if (window.crypto && typeof window.crypto.randomUUID === "function") {
-        return window.crypto.randomUUID();
-      }
-    } catch (e) { /* fall through to the manual id */ }
-    return "a-" + Date.now().toString(36) + "-"
-      + Math.floor(Math.random() * 1e9).toString(36);
-  }
-
-  // Persistent one-line diagnostic (survives the app closing on the
-  // sendData fallback): the stamp on next open shows what happened.
+  // Persistent one-line diagnostic: the stamp on next open shows what
+  // happened last time.
   function noteDiag(text) {
     try { window.localStorage.setItem("gemDiag", text); } catch (e) {}
   }
@@ -660,68 +628,57 @@
     sending = false;
   }
 
-  function apiFallback(obj, why) {
-    // The relay POST failed or no answer landed in time: deliver the
-    // action the old way. The optimistic update is already on screen;
-    // the bot re-validates everything server-side, so even if the
-    // relay copy ALSO gets processed later, the duplicate is rejected
-    // or a no-op (claims, tasks and withdrawals are all guarded).
-    // The toast + stamp are held on screen for a moment BEFORE the
-    // sendData fallback fires (sendData closes the app), so a failure
-    // of the API path is visible instead of silent.
+  function apiError(why) {
     noteDiag("API gagal: " + (why || "nggak diketahui"));
-    var verEl = document.getElementById("appVersion");
-    if (verEl) verEl.textContent = "GEM Mining v13 • API GAGAL: " + (why || "?");
-    toast("⚠️ Koneksi API gagal — hasil dikirim lewat chat.");
-    setTimeout(function () {
-      if (!sendDataOnly(obj)) {
-        toast("⚠️ Koneksi lagi bermasalah — coba lagi ya.");
-      }
-      sending = false;
-    }, 2500);
+    toast("⚠️ Koneksi ke server gagal — coba lagi ya.");
+    sending = false;
   }
 
-  function apiPoll(id, obj, triesLeft) {
-    window.fetch(API_BASE + "/result/" + encodeURIComponent(id))
-      .then(function (r) { return r.json(); })
-      .then(function (res) {
-        if (res && res.status === "done") {
-          apiDone(res.reply, res.payload);
-          return;
-        }
-        throw new Error("pending");
-      })
-      .catch(function () {
-        if (triesLeft > 1) {
-          setTimeout(function () { apiPoll(id, obj, triesLeft - 1); }, API_POLL_MS);
-        } else {
-          apiFallback(obj, "timeout — bot nggak jawab hasil");
-        }
-      });
+  // POST one action to the API and resolve with its parsed JSON body
+  // ({ok, reply, payload}); rejects on network error, timeout, a
+  // non-200 status or an {ok:false} body.
+  function fetchAction(obj) {
+    var ctrl = typeof AbortController === "function"
+      ? new AbortController() : null;
+    var timer = ctrl
+      ? setTimeout(function () { ctrl.abort(); }, API_TIMEOUT_MS) : null;
+    function done() { if (timer) clearTimeout(timer); }
+    return window.fetch(API_BASE + "/action", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ initData: tg.initData, data: obj }),
+      signal: ctrl ? ctrl.signal : undefined
+    }).then(function (r) {
+      done();
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      return r.json();
+    }).then(function (res) {
+      if (!res || res.ok === false) {
+        throw new Error((res && res.error) || "server error");
+      }
+      return res;
+    }).catch(function (e) {
+      done();
+      throw e;
+    });
   }
 
   function apiSend(obj) {
-    var id = newActionId();
-    window.fetch(API_BASE + "/action", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id: id, initData: tg.initData, data: obj })
-    }).then(function (r) {
-      if (!r.ok) { apiFallback(obj, "relay nolak (HTTP " + r.status + ")"); return; }
-      apiPoll(id, obj, API_POLL_TRIES);
+    fetchAction(obj).then(function (res) {
+      apiDone(res.reply, res.payload);
     }).catch(function (e) {
-      apiFallback(obj, "POST /action gagal: " + (e && e.message ? e.message : e));
+      apiError(e && e.message ? e.message : "network");
     });
   }
 
   /* Direct-entry bootstrap: the page was opened from the chat Menu
    * Button, which launches the bare URL — no signed payload fragment
-   * — but DOES carry initData. Ask the relay for our state with the
+   * — but DOES carry initData. Ask the server for our state with the
    * side-effect-free "bootstrap" action; the fresh payload in the
    * result renders the app exactly like a payload launch (and the
    * bot's empty reply means no toast). Unlike normal actions there
-   * is NO sendData fallback here: sendData cannot work before the
-   * app has state, so any failure lands on the blocked screen. */
+   * app has state, so any failure (after retries) lands on the
+   * blocked screen — with the reason printed on it. */
   var bootstrapAttempt = 0;
   function bootstrapFail(why) {
     // Transient network failures are common on mobile data: retry the
@@ -742,64 +699,31 @@
   }
 
   function apiBootstrap() {
-    var id = newActionId();
-    window.fetch(API_BASE + "/action", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        id: id, initData: tg.initData, data: { action: "bootstrap" }
-      })
-    }).then(function (r) {
-      if (!r.ok) { bootstrapFail("server balas HTTP " + r.status); return; }
-      apiPollBootstrap(id, API_POLL_TRIES);
+    fetchAction({ action: "bootstrap" }).then(function (res) {
+      if (!res.payload) { bootstrapFail("sesi ditolak server"); return; }
+      apiDone(res.reply, res.payload);
+      stampVersion();
+      showScreen("app");
+      startTicker();
     }).catch(function (e) {
-      bootstrapFail("POST gagal (" + (e && e.message ? e.message : "network") + ")");
+      bootstrapFail(e && e.message ? e.message : "network");
     });
-  }
-
-  function apiPollBootstrap(id, triesLeft) {
-    window.fetch(API_BASE + "/result/" + encodeURIComponent(id))
-      .then(function (r) { return r.json(); })
-      .then(function (res) {
-        if (res && res.status === "done") {
-          if (!res.payload) { bootstrapFail("sesi ditolak server"); return; }
-          apiDone(res.reply, res.payload);
-          stampVersion();
-          showScreen("app");
-          startTicker();
-          return;
-        }
-        throw new Error("pending");
-      })
-      .catch(function () {
-        if (triesLeft > 1) {
-          setTimeout(function () {
-            apiPollBootstrap(id, triesLeft - 1);
-          }, API_POLL_MS);
-        } else {
-          bootstrapFail("jawaban server timeout");
-        }
-      });
   }
 
   function sendAction(obj, applyFn) {
     if (sending) return true; // a send is already landing; swallow the tap
-    if (apiAvailable()) {
-      // Relay path: paint the optimistic update now; the bot's reply
-      // toast + fresh payload land when the poll completes. The
-      // in-flight flag stays up until then so actions can't interleave.
-      sending = true;
-      if (applyFn) applyFn();
-      render();
-      apiSend(obj);
-      return true;
+    if (!apiAvailable()) {
+      noteDiag("API nggak tersedia: " + apiWhy());
+      toast("⚠️ " + (apiWhy() || "Koneksi nggak tersedia"));
+      return false;
     }
-    noteDiag("mode chat langsung: " + apiWhy());
-    if (!sendDataOnly(obj)) return false;
+    // Paint the optimistic update now; the server's reply toast +
+    // fresh payload land when the single request answers. The
+    // in-flight flag stays up until then so actions can't interleave.
     sending = true;
     if (applyFn) applyFn();
     render();
-    sending = false;
+    apiSend(obj);
     return true;
   }
 
@@ -1101,8 +1025,8 @@
     var verEl = document.getElementById("appVersion");
     if (!verEl) return;
     var prev = readDiag();
-    verEl.textContent = "GEM Mining v13 • mode "
-      + (apiAvailable() ? "API" : ("CHAT (" + apiWhy() + ")"))
+    verEl.textContent = "GEM Mining v14 • mode "
+      + (apiAvailable() ? "API" : ("OFFLINE (" + apiWhy() + ")"))
       + (prev ? " • lalu: " + prev : "");
   }
 
@@ -1111,9 +1035,9 @@
     // No (valid) state snapshot in the URL. Two ways to land here:
     // a direct or stale link — the blocked screen, as before — or a
     // launch from the chat Menu Button, which opens the bare page
-    // with no fragment but DOES carry initData. In API mode that is
-    // enough: bootstrap the state over the relay and come up exactly
-    // like a payload launch. Without the relay, blocked it is.
+    // with no fragment but DOES carry initData. That is enough:
+    // bootstrap the state with one API call and come up exactly
+    // like a payload launch. Without initData, blocked it is.
     if (apiAvailable()) {
       showScreen("loading");
       apiBootstrap();
