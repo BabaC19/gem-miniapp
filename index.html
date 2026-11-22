@@ -6,7 +6,7 @@
 <title>GEM Mining</title>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <script src="https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.js"></script>
-<link rel="stylesheet" href="style.css?v=8">
+<link rel="stylesheet" href="style.css?v=9">
 </head>
 <body>
 
@@ -50,8 +50,8 @@
 
   <main class="panels">
 
-    <!-- ⛏️ TAMBANG -->
-    <section id="panel-mining" class="panel active">
+    <!-- ⛏️ MINE -->
+    <section id="panel-mine" class="panel active">
 
       <div class="gem-stage">
         <div class="ring-wrap">
@@ -108,7 +108,7 @@
       <div id="miningIdle" class="mining-box">
         <h2>Siap menambang? ⛏️</h2>
         <p>Satu sesi berjalan <b>8 jam</b> dan menghasilkan
-           <b id="idleFull">80 GEM</b>. Gratis, tanpa modal — tinggal mulai,
+           <b id="idleFull">116.67 GEM</b>. Gratis, tanpa modal — tinggal mulai,
            balik lagi nanti buat klaim.</p>
         <button id="btnStart" class="btn btn-primary btn-big">⛏️ Mulai Mining</button>
         <p class="mining-hint">Hasilnya dikonfirmasi di chat bot ya. 💬</p>
@@ -123,7 +123,7 @@
           <div class="stat"><span class="stat-label">💎 Terkumpul</span><span class="stat-value" id="statAccrued">0</span></div>
           <div class="stat"><span class="stat-label">⏱️ Berjalan</span><span class="stat-value" id="statElapsed">0 detik</span></div>
           <div class="stat"><span class="stat-label">⌛ Sisa waktu</span><span class="stat-value" id="statRemaining">8 jam</span></div>
-          <div class="stat"><span class="stat-label">🎯 Target sesi</span><span class="stat-value" id="statTarget">80 GEM</span></div>
+          <div class="stat"><span class="stat-label">🎯 Target sesi</span><span class="stat-value" id="statTarget">116.67 GEM</span></div>
         </div>
         <button id="btnEarlyClaim" class="btn btn-claim btn-early" disabled>Klaim (min. 1 GEM)</button>
         <p class="mining-hint">Udah terkumpul 1 GEM? Klaim aja sekarang —
@@ -134,32 +134,50 @@
       <!-- state: finished -->
       <div id="miningDone" class="mining-box hidden">
         <h2>Sesi selesai! 🎉</h2>
-        <p>Kamu menghasilkan <b id="doneAmount">80 GEM</b> dari sesi ini.
+        <p>Kamu menghasilkan <b id="doneAmount">116.67 GEM</b> dari sesi ini.
            Klaim sekarang biar masuk ke saldo.</p>
-        <button id="btnClaim" class="btn btn-claim btn-big">✅ Klaim <span id="claimAmount">80</span> GEM</button>
+        <button id="btnClaim" class="btn btn-claim btn-big">✅ Klaim <span id="claimAmount">116.67</span> GEM</button>
         <p class="mining-hint">GEM-mu dikonfirmasi di chat bot ya. 💬</p>
       </div>
 
       <p id="miningError" class="error hidden"></p>
+    </section>
 
-      <!-- ⭐ LEVEL (di bawah tombol aksi: alur mining dibaca dari atas —
-           saldo → sesi → klaim → level) -->
+    <!-- ✅ TASK -->
+    <section id="panel-task" class="panel">
+      <h2 class="panel-title">📋 Tugas</h2>
+      <p class="muted">Selesaikan tugas buat kumpulin GEM bonus.
+         Habis klaim, hasilnya muncul di chat bot ya. 💬</p>
+      <div id="taskList" class="task-list"></div>
+    </section>
+
+    <!-- 🚀 BOOST (level / pengkali mining) -->
+    <section id="panel-boost" class="panel">
+      <h2 class="panel-title">🚀 Boost</h2>
+
+      <!-- ⭐ LEVEL: pengkali dari GEM yang disimpan di wallet TON -->
       <div class="level-card" id="levelCard">
         <div class="level-head">
           <span class="level-badge" id="levelBadge">⭐ Lv 1</span>
           <span class="level-mult" id="levelMult">pengkali ×1</span>
         </div>
-        <p class="level-rate">Kecepatan mining: <b id="levelRate">10 GEM/jam</b></p>
+        <p class="level-rate">Pendapatan mining: <b id="levelRate">350 GEM/hari</b></p>
         <p class="level-holdings">GEM di wallet kamu: <b id="levelHoldings">0 GEM</b></p>
         <div class="level-progress"><div id="levelBar" class="level-bar"></div></div>
         <p class="level-next" id="levelNext"></p>
+        <table class="level-table">
+          <thead>
+            <tr><th>Level</th><th>GEM di wallet</th><th>Pengkali</th><th>Pendapatan/hari</th></tr>
+          </thead>
+          <tbody id="levelTableBody"></tbody>
+        </table>
         <p class="level-note">Pengkali naik dari GEM yang kamu simpan di wallet TON kamu — bukan dari saldo di aplikasi.</p>
         <p class="level-note hidden" id="levelLiveNote">Aktif pas token GEM live di jaringan.</p>
       </div>
     </section>
 
-    <!-- 👥 REFERRAL -->
-    <section id="panel-referral" class="panel">
+    <!-- 👥 FRIENDS (referral) -->
+    <section id="panel-friends" class="panel">
       <h2 class="panel-title">👥 Referral</h2>
       <p>Ajak temanmu mining GEM! Setiap teman yang kamu undang dan
          menyelesaikan klaim pertamanya, kamu dapat <b>+25 GEM</b>
@@ -178,24 +196,27 @@
          Makin banyak teman mining, makin banyak bonusmu. 🚀</p>
     </section>
 
-    <!-- 🏆 LEADERBOARD -->
-    <section id="panel-leaderboard" class="panel">
-      <h2 class="panel-title">🏆 Leaderboard</h2>
-      <p class="muted">Top 10 miner GEM dengan saldo terbesar.</p>
-      <ol id="boardList" class="board"></ol>
-      <div id="myRank" class="my-rank hidden"></div>
-    </section>
+    <!-- 👤 PROFIL (profil + wallet) -->
+    <section id="panel-profil" class="panel">
+      <h2 class="panel-title">👤 Profil</h2>
 
-    <!-- 📋 TUGAS -->
-    <section id="panel-tasks" class="panel">
-      <h2 class="panel-title">📋 Tugas</h2>
-      <p class="muted">Selesaikan tugas buat kumpulin GEM bonus.
-         Habis klaim, hasilnya muncul di chat bot ya. 💬</p>
-      <div id="taskList" class="task-list"></div>
-    </section>
+      <!-- 👤 PROFILE HEADER + STATS -->
+      <div class="profile-card" id="profileCard">
+        <div class="profile-head">
+          <div class="profile-avatar" id="profileAvatar">💎</div>
+          <div class="profile-id">
+            <div class="profile-name" id="profileName">Miner</div>
+            <div class="profile-username" id="profileUsername"></div>
+            <div class="profile-badge hidden" id="profileBadge"></div>
+          </div>
+        </div>
+        <div class="stat-grid cols-3">
+          <div class="stat"><span class="stat-label">💰 Saldo</span><span class="stat-value" id="profileBalance">0 GEM</span></div>
+          <div class="stat"><span class="stat-label">⛏️ Total ditambang</span><span class="stat-value" id="profileMined">0 GEM</span></div>
+          <div class="stat"><span class="stat-label">👥 Referral</span><span class="stat-value" id="profileReferrals">0</span></div>
+        </div>
+      </div>
 
-    <!-- 💳 WALLET -->
-    <section id="panel-wallet" class="panel">
       <h2 class="panel-title">💳 Wallet</h2>
 
       <!-- 🔗 WALLET TON + 🛡️ VERIFIKASI -->
@@ -235,21 +256,21 @@
         </div>
         <p id="wdNote" class="wallet-note hidden"></p>
       </div>
-      <p class="app-version" id="appVersion">GEM Mining v8</p>
+      <p class="app-version" id="appVersion">GEM Mining v9</p>
     </section>
   </main>
 
   <nav class="tabbar">
-    <button class="tab active" data-tab="mining"><span class="tab-icon">⛏️</span><span>Tambang</span></button>
-    <button class="tab" data-tab="tasks"><span class="tab-icon">📋</span><span>Tugas</span></button>
-    <button class="tab" data-tab="referral"><span class="tab-icon">👥</span><span>Referral</span></button>
-    <button class="tab" data-tab="leaderboard"><span class="tab-icon">🏆</span><span>Peringkat</span></button>
-    <button class="tab" data-tab="wallet"><span class="tab-icon">💳</span><span>Wallet</span></button>
+    <button class="tab active" data-tab="mine"><span class="tab-icon">⛏️</span><span>Mine</span></button>
+    <button class="tab" data-tab="task"><span class="tab-icon">✅</span><span>Task</span></button>
+    <button class="tab" data-tab="boost"><span class="tab-icon">🚀</span><span>Boost</span></button>
+    <button class="tab" data-tab="friends"><span class="tab-icon">👥</span><span>Friends</span></button>
+    <button class="tab" data-tab="profil"><span class="tab-icon">👤</span><span>Profil</span></button>
   </nav>
 
   <div id="toast" class="toast hidden"></div>
 </div>
 
-<script src="app.js?v=8"></script>
+<script src="app.js?v=9"></script>
 </body>
 </html>

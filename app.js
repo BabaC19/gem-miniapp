@@ -26,6 +26,14 @@
   // Diisi pas deploy Worker (URL https://...workers.dev). Kosong = mode sendData.
   var API_BASE = "https://gem-api.muhamadikmal3456.workers.dev";
 
+  /* Mining economics (mirror bot.py): the base level earns
+   * BASE_DAILY_GEM per 24 hours; payload rates are per hour and the
+   * UI presents earnings per day. Only used as fallbacks — the real
+   * numbers always come from the payload. */
+  var BASE_DAILY_GEM = 350;
+  var BASE_RATE = BASE_DAILY_GEM / 24; // per hour, base level
+  var SESSION_HOURS = 8;
+
   var $ = function (id) { return document.getElementById(id); };
   var state = null;       // render state, built from the URL payload
   var tickTimer = null;   // 1-second UI ticker while a session runs
@@ -86,14 +94,14 @@
     if (!s) return 0;
     var t = Math.min(now, s.end_ts);
     var last = s.last_claim_ts || s.start_ts;
-    var since = (s.rate_per_hour || 10) * Math.max(0, t - last) / 3600;
+    var since = (s.rate_per_hour || BASE_RATE) * Math.max(0, t - last) / 3600;
     var remaining = s.full_amount - (s.claimed_total || 0);
     return Math.max(0, Math.min(since, remaining));
   }
 
   function stateFromPayload(p) {
-    var rate = Number(p.rate_per_hour) || 10;
-    var full = Number(p.session_full) || 80;
+    var rate = Number(p.rate_per_hour) || BASE_RATE;
+    var full = Number(p.session_full) || BASE_RATE * SESSION_HOURS;
     var session = null;
     if (p.session && p.session.start_ts && p.session.end_ts) {
       // A running session mines at its own LOCKED rate (from when it
@@ -117,16 +125,16 @@
         session.accrued = Math.max(0, sFull - session.claimed_total);
       }
     }
-    var rows = (p.leaderboard || []).map(function (r, i) {
-      return {
-        rank: i + 1,
-        name: r.name || "Miner",
-        balance: Number(r.balance) || 0,
-        is_you: !!p.name && (r.name === p.name)
-      };
-    });
     return {
       user: { id: p.uid, first_name: p.name || "Miner" },
+      profile: {
+        name: (p.profile && p.profile.name) || p.name || "Miner",
+        username: (p.profile && p.profile.username) || null,
+        total_mined: p.profile ? (Number(p.profile.total_mined) || 0) : 0,
+        referral_count: p.profile && p.profile.referral_count != null
+          ? Number(p.profile.referral_count)
+          : (p.referral ? (p.referral.invited || 0) : 0)
+      },
       balance: Number(p.balance) || 0,
       wallet: p.wallet && p.wallet.address ? String(p.wallet.address) : null,
       walletVerified: !!(p.wallet && p.wallet.verified),
@@ -141,9 +149,7 @@
         link: p.referral && p.referral.link ? p.referral.link : null,
         invited: p.referral ? (p.referral.invited || 0) : 0,
         earnings: p.referral ? (Number(p.referral.earnings) || 0) : 0
-      },
-      leaderboard: rows,
-      rank: p.my_rank || null
+      }
     };
   }
 
@@ -167,6 +173,7 @@
     renderWithdraw();
     renderLevel();
     renderTasks();
+    renderProfile();
 
     // Mining tab: three mutually exclusive states.
     $("miningIdle").classList.toggle("hidden", !!s);
@@ -185,7 +192,7 @@
       setRing(0);
     }
 
-    // Referral tab.
+    // Friends tab (referral).
     if (state.referral && state.referral.link) {
       $("refLink").value = state.referral.link;
       $("refLinkBox").classList.remove("hidden");
@@ -196,45 +203,30 @@
     }
     $("refInvited").textContent = state.referral ? state.referral.invited : 0;
     $("refEarnings").textContent = fmtPoints(state.referral ? state.referral.earnings : 0) + " GEM";
+  }
 
-    // Leaderboard tab.
-    var list = $("boardList");
-    list.innerHTML = "";
-    var rows = state.leaderboard || [];
-    if (!rows.length) {
-      var empty = document.createElement("li");
-      empty.className = "empty";
-      empty.textContent = "Belum ada miner. Jadilah yang pertama! 💎";
-      list.appendChild(empty);
-    }
-    rows.forEach(function (row) {
-      var li = document.createElement("li");
-      if (row.is_you) li.className = "you";
-      var medal = row.rank === 1 ? "🥇" : row.rank === 2 ? "🥈" : row.rank === 3 ? "🥉" : row.rank + ".";
-      var rank = document.createElement("span");
-      rank.className = "rank";
-      rank.textContent = medal;
-      var name = document.createElement("span");
-      name.className = "name";
-      name.textContent = row.name + (row.is_you ? " (kamu)" : "");
-      var pts = document.createElement("span");
-      pts.className = "pts";
-      pts.textContent = fmtPoints(row.balance) + " GEM";
-      li.appendChild(rank);
-      li.appendChild(name);
-      li.appendChild(pts);
-      list.appendChild(li);
-    });
-    var inTop = rows.some(function (r) { return r.is_you; });
-    if (state.rank && !inTop) {
-      $("myRank").classList.remove("hidden");
-      $("myRank").textContent = "Peringkat kamu: #" + state.rank + " — terus mining biar masuk Top 10! 🚀";
-    } else if (state.rank && inTop) {
-      $("myRank").classList.remove("hidden");
-      $("myRank").textContent = "Peringkat kamu: #" + state.rank + " — kamu ada di Top 10! 🔥";
-    } else {
-      $("myRank").classList.add("hidden");
-    }
+  /* ---------------- profil tab: header + stats ----------------
+   * Renders from the payload's `profile` object (name, username,
+   * lifetime total mined, referral count); the verification badge
+   * mirrors the wallet state shown in the wallet card below it. */
+  function renderProfile() {
+    var prof = state.profile || {};
+    var name = prof.name || (state.user && state.user.first_name) || "Miner";
+    $("profileAvatar").textContent = name.trim().charAt(0).toUpperCase() || "💎";
+    $("profileName").textContent = name;
+    $("profileUsername").textContent = prof.username
+      ? "@" + prof.username
+      : "ID: " + (state.user && state.user.id != null ? state.user.id : "—");
+    var badge = $("profileBadge");
+    var badgeText = "";
+    if (state.walletVerified) badgeText = "🛡️ Wallet terverifikasi";
+    else if (state.walletPending) badgeText = "⏳ Verifikasi lagi dicek…";
+    else if (state.wallet) badgeText = "🔗 Wallet terhubung · belum terverifikasi";
+    badge.textContent = badgeText;
+    badge.classList.toggle("hidden", !badgeText);
+    $("profileBalance").textContent = fmtPoints(state.balance) + " GEM";
+    $("profileMined").textContent = fmtPoints(prof.total_mined || 0) + " GEM";
+    $("profileReferrals").textContent = fmtPoints(prof.referral_count || 0);
   }
 
   function setRing(frac) {
@@ -243,7 +235,8 @@
   }
 
   /* Live counter format: 4 decimals so the mined amount visibly runs
-   * (at 10 GEM/hour the 4th decimal moves several times per second). */
+   * (at the base rate of 350 GEM/day the 4th decimal moves several
+   * times per second). */
   function fmtLive(n) {
     return Number(n || 0).toLocaleString("en-US", {
       minimumFractionDigits: 4,
@@ -270,7 +263,7 @@
     var total = s.end_ts - s.start_ts;
     var elapsed = Math.max(0, now - s.start_ts);
     var frac = total > 0 ? Math.min(1, elapsed / total) : 1;
-    var accrued = Math.min(elapsed / 3600, total / 3600) * (s.rate_per_hour || 10);
+    var accrued = Math.min(elapsed / 3600, total / 3600) * (s.rate_per_hour || BASE_RATE);
     s.accrued = accrued;
 
     setRing(frac);
@@ -428,6 +421,39 @@
   });
 
   /* ---------------- level card ---------------- */
+  // Fallback level table (mirrors bot.py LEVELS × BASE_DAILY_GEM);
+  // the payload's level.table wins whenever it is present.
+  var LEVEL_TABLE_FALLBACK = [
+    { level: 1, threshold: 0, multiplier: 1, per_day: BASE_DAILY_GEM * 1 },
+    { level: 2, threshold: 500, multiplier: 1.5, per_day: BASE_DAILY_GEM * 1.5 },
+    { level: 3, threshold: 2000, multiplier: 2, per_day: BASE_DAILY_GEM * 2 },
+    { level: 4, threshold: 5000, multiplier: 3, per_day: BASE_DAILY_GEM * 3 },
+    { level: 5, threshold: 10000, multiplier: 5, per_day: BASE_DAILY_GEM * 5 }
+  ];
+
+  function renderLevelTable(lv) {
+    var body = $("levelTableBody");
+    if (!body) return;
+    var rows = (lv.table && lv.table.length) ? lv.table : LEVEL_TABLE_FALLBACK;
+    body.textContent = "";
+    rows.forEach(function (r) {
+      var tr = document.createElement("tr");
+      if (Number(r.level) === Number(lv.level)) tr.className = "current";
+      var cells = [
+        "⭐ Lv " + r.level,
+        "≥ " + fmtPoints(r.threshold) + " GEM",
+        "×" + fmtPoints(r.multiplier),
+        fmtPoints(r.per_day) + " GEM"
+      ];
+      cells.forEach(function (text) {
+        var td = document.createElement("td");
+        td.textContent = text;
+        tr.appendChild(td);
+      });
+      body.appendChild(tr);
+    });
+  }
+
   function renderLevel() {
     var card = $("levelCard");
     if (!card) return;
@@ -436,7 +462,12 @@
     card.classList.remove("hidden");
     $("levelBadge").textContent = "⭐ Lv " + lv.level;
     $("levelMult").textContent = "pengkali ×" + fmtPoints(lv.multiplier);
-    $("levelRate").textContent = fmtPoints(lv.rate_per_hour) + " GEM/jam";
+    // Earnings are presented per day (payload rate_per_day; the
+    // hourly payload field × 24 as fallback).
+    $("levelRate").textContent = fmtPoints(
+      lv.rate_per_day || (Number(lv.rate_per_hour) || BASE_RATE) * 24
+    ) + " GEM/hari";
+    renderLevelTable(lv);
     // The level comes from GEM held in the TON wallet (on-chain),
     // never from the in-app balance.
     $("levelHoldings").textContent = fmtPoints(lv.holdings || 0) + " GEM";
@@ -619,7 +650,7 @@
     // sendData fallback fires (sendData closes the app), so a failure
     // of the API path is visible instead of silent.
     var verEl = document.getElementById("appVersion");
-    if (verEl) verEl.textContent = "GEM Mining v8 • API GAGAL — jatuh ke mode chat";
+    if (verEl) verEl.textContent = "GEM Mining v9 • API GAGAL — jatuh ke mode chat";
     toast("⚠️ Koneksi API gagal — hasil dikirim lewat chat.");
     setTimeout(function () {
       if (!sendDataOnly(obj)) {
@@ -688,12 +719,12 @@
     var now = Date.now() / 1000;
     if (kind === "start") {
       var rate = state.level && state.level.rate_per_hour
-        ? Number(state.level.rate_per_hour) : 10;
+        ? Number(state.level.rate_per_hour) : BASE_RATE;
       state.session = {
         start_ts: now,
-        end_ts: now + 8 * 3600,
+        end_ts: now + SESSION_HOURS * 3600,
         rate_per_hour: rate,
-        full_amount: rate * 8,
+        full_amount: rate * SESSION_HOURS,
         claimed_total: 0,
         last_claim_ts: now,
         min_claim: 1,
@@ -706,17 +737,20 @@
       if (!s) return;
       if (s.claimable) {
         // Final claim: same formula as the server (full − claimed).
-        state.balance += Math.max(0, s.full_amount - (s.claimed_total || 0));
+        var finalAmount = Math.max(0, s.full_amount - (s.claimed_total || 0));
+        state.balance += finalAmount;
+        if (state.profile) state.profile.total_mined += finalAmount;
         state.session = null;
         var nextRate = state.level && state.level.rate_per_hour
-          ? Number(state.level.rate_per_hour) : 10;
-        state.idleFull = nextRate * 8;
+          ? Number(state.level.rate_per_hour) : BASE_RATE;
+        state.idleFull = nextRate * SESSION_HOURS;
       } else {
         // Early claim: pay the live available amount, move the
         // watermark — availability restarts from ~0 and ticks up again.
         var amount = availableOf(s, now);
         if (amount <= 0) return;
         state.balance += amount;
+        if (state.profile) state.profile.total_mined += amount;
         s.claimed_total = (s.claimed_total || 0) + amount;
         s.last_claim_ts = now;
       }
@@ -983,7 +1017,7 @@
   state = stateFromPayload(payload);
   var verEl = document.getElementById("appVersion");
   if (verEl) {
-    verEl.textContent = "GEM Mining v8 • mode "
+    verEl.textContent = "GEM Mining v9 • mode "
       + (apiAvailable() ? "API" : (API_BASE ? "API (initData/fetch nggak ada)" : "CHAT"));
   }
   showScreen("app");

@@ -312,35 +312,42 @@ body.is-mining .orbit-particle, body.is-done .orbit-particle {
 }
 .copy-ok { color: var(--emerald-bright); font-weight: 600; margin: 4px 0 0; }
 
-/* ---------- leaderboard ---------- */
-.board { list-style: none; margin: 12px 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
-.board li {
-  display: flex;
-  align-items: center;
-  gap: 10px;
+/* ---------- profil ---------- */
+.profile-card {
   background: var(--card);
   border: 1px solid var(--card-border);
-  border-radius: 14px;
-  padding: 11px 14px;
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  margin-bottom: 16px;
 }
-.board li.you {
-  border-color: var(--emerald-bright);
-  background: linear-gradient(135deg, rgba(16, 185, 129, 0.22), rgba(13, 148, 136, 0.08));
-  box-shadow: 0 0 0 1px rgba(52, 211, 153, 0.35), 0 6px 18px rgba(16, 185, 129, 0.18);
+.profile-head { display: flex; align-items: center; gap: 13px; }
+.profile-avatar {
+  width: 54px;
+  height: 54px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  font-weight: 800;
+  color: #052e22;
+  background: linear-gradient(135deg, var(--emerald-bright), var(--teal));
+  box-shadow: 0 6px 16px rgba(16, 185, 129, 0.35);
 }
-.board .rank { font-size: 17px; width: 30px; text-align: center; flex-shrink: 0; }
-.board .name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
-.board .pts { font-weight: 800; color: var(--mint); font-variant-numeric: tabular-nums; }
-.board .empty { justify-content: center; color: var(--tg-hint); }
-.my-rank {
-  text-align: center;
-  font-weight: 700;
-  background: var(--card);
-  border: 1px dashed var(--card-border);
-  border-radius: 14px;
-  padding: 11px;
-  color: var(--mint);
+.profile-id { min-width: 0; }
+.profile-name {
+  font-size: 17px;
+  font-weight: 800;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
+.profile-username { font-size: 13px; color: var(--tg-hint); }
+.profile-badge { font-size: 12.5px; font-weight: 700; color: var(--emerald-bright); margin-top: 2px; }
+.stat-grid.cols-3 { grid-template-columns: repeat(3, 1fr); }
+.stat-grid.cols-3 .stat { padding: 10px; }
+.stat-grid.cols-3 .stat-value { font-size: 14.5px; }
 
 /* ---------- wallet card ---------- */
 .wallet-card {
@@ -474,6 +481,10 @@ body.is-mining .orbit-particle, body.is-done .orbit-particle {
 .level-holdings { margin: 0 0 10px; font-size: 14px; }
 .level-holdings b { color: var(--mint); font-variant-numeric: tabular-nums; }
 .level-note { margin: 8px 0 0; font-size: 12.5px; color: var(--tg-hint); line-height: 1.45; }
+.level-table { width: 100%; margin: 12px 0 4px; border-collapse: collapse; font-size: 12.5px; }
+.level-table th { padding: 5px 4px; text-align: left; color: var(--tg-hint); font-weight: 600; border-bottom: 1px solid var(--tg-border, rgba(127, 127, 127, .25)); }
+.level-table td { padding: 5px 4px; font-variant-numeric: tabular-nums; border-bottom: 1px solid var(--tg-border, rgba(127, 127, 127, .12)); }
+.level-table tr.current td { color: var(--mint); font-weight: 700; }
 
 /* ---------- tasks ---------- */
 .task-list { display: flex; flex-direction: column; gap: 10px; margin: 12px 0; }
