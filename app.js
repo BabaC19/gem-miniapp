@@ -615,12 +615,18 @@
     // the bot re-validates everything server-side, so even if the
     // relay copy ALSO gets processed later, the duplicate is rejected
     // or a no-op (claims, tasks and withdrawals are all guarded).
-    if (sendDataOnly(obj)) {
-      toast("⚠️ Koneksi API gagal — hasil dikirim lewat chat.");
-    } else {
-      toast("⚠️ Koneksi lagi bermasalah — coba lagi ya.");
-    }
-    sending = false;
+    // The toast + stamp are held on screen for a moment BEFORE the
+    // sendData fallback fires (sendData closes the app), so a failure
+    // of the API path is visible instead of silent.
+    var verEl = document.getElementById("appVersion");
+    if (verEl) verEl.textContent = "GEM Mining v8 • API GAGAL — jatuh ke mode chat";
+    toast("⚠️ Koneksi API gagal — hasil dikirim lewat chat.");
+    setTimeout(function () {
+      if (!sendDataOnly(obj)) {
+        toast("⚠️ Koneksi lagi bermasalah — coba lagi ya.");
+      }
+      sending = false;
+    }, 2500);
   }
 
   function apiPoll(id, obj, triesLeft) {
@@ -977,7 +983,8 @@
   state = stateFromPayload(payload);
   var verEl = document.getElementById("appVersion");
   if (verEl) {
-    verEl.textContent = "GEM Mining v7 • mode " + (API_BASE ? "API" : "CHAT");
+    verEl.textContent = "GEM Mining v8 • mode "
+      + (apiAvailable() ? "API" : (API_BASE ? "API (initData/fetch nggak ada)" : "CHAT"));
   }
   showScreen("app");
   render();
