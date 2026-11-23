@@ -132,6 +132,7 @@
       verify: p.verify && typeof p.verify === "object" ? p.verify : null,
       withdraw: p.withdraw && typeof p.withdraw === "object" ? p.withdraw : null,
       tasks: Array.isArray(p.tasks) ? p.tasks : [],
+      checkin: p.checkin && typeof p.checkin === "object" ? p.checkin : null,
       level: p.level && typeof p.level === "object" ? p.level : null,
       idleFull: session ? null : full,
       session: session,
@@ -570,7 +571,7 @@
     if (mc) {
       mc.textContent = tasks.filter(function (t) {
         return t.state === "ready";
-      }).length;
+      }).length + (state.checkin && !state.checkin.claimed_today ? 1 : 0);
     }
     if (!tasks.length) {
       var empty = document.createElement("p");
@@ -578,6 +579,54 @@
       empty.textContent = "No tasks right now. Check back later. 💎";
       list.appendChild(empty);
       return;
+    }
+    var ci = state.checkin;
+    if (ci) {
+      var ccard = document.createElement("div");
+      ccard.className = "task-card checkin-card";
+      var chead = document.createElement("div");
+      chead.className = "checkin-head";
+      chead.textContent = "📅 Daily Check-In";
+      ccard.appendChild(chead);
+      var cdesc = document.createElement("div");
+      cdesc.className = "task-desc";
+      cdesc.textContent = "Check in every day — the reward grows by " +
+        "5 GEM daily. Miss a day and the streak restarts at Day 1!";
+      ccard.appendChild(cdesc);
+      var grid = document.createElement("div");
+      grid.className = "checkin-grid";
+      for (var d = 1; d <= (ci.days || 30); d++) {
+        var chip = document.createElement("div");
+        var cls = "ci-chip";
+        if (d < ci.day || (d === ci.day && ci.claimed_today)) cls += " done";
+        else if (d === ci.day) cls += " today";
+        chip.className = cls;
+        var db = document.createElement("b");
+        db.textContent = d;
+        var ds = document.createElement("span");
+        ds.textContent = "+" + (ci.base || 5) * d;
+        chip.appendChild(db);
+        chip.appendChild(ds);
+        grid.appendChild(chip);
+      }
+      ccard.appendChild(grid);
+      var cbtn = document.createElement("button");
+      if (ci.claimed_today) {
+        cbtn.className = "btn btn-done";
+        cbtn.disabled = true;
+        cbtn.textContent = "✅ Day " + ci.day + " checked in — come back tomorrow";
+      } else {
+        cbtn.className = "btn btn-primary";
+        cbtn.textContent = "📅 Check in Day " + ci.day + " · +" + ci.reward + " GEM";
+        cbtn.addEventListener("click", function () {
+          sendAction({ action: "checkin" }, function () {
+            if (state.checkin) state.checkin.claimed_today = true;
+            state.balance += ci.reward;
+          });
+        });
+      }
+      ccard.appendChild(cbtn);
+      list.appendChild(ccard);
     }
     tasks.forEach(function (t) {
       var card = document.createElement("div");

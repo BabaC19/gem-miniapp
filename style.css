@@ -913,3 +913,16 @@ body.is-done .gem-img { animation: floaty 1.4s ease-in-out infinite, gemGlow 1.1
   background-size: cover;
   background-position: center 82%;
 }
+
+/* Daily check-in (v32) */
+.checkin-card { flex-direction: column; align-items: stretch; gap: 10px; }
+.checkin-head { font-weight: 800; font-size: 17px; color: var(--hatch-widget-text, #eafff3); }
+.checkin-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; }
+.ci-chip { border: 1px solid rgba(52, 211, 153, .25); border-radius: 10px;
+  padding: 5px 2px; text-align: center; background: rgba(6, 40, 26, .45);
+  display: flex; flex-direction: column; line-height: 1.15; }
+.ci-chip b { font-size: 13px; color: #d1fae5; }
+.ci-chip span { font-size: 10px; color: #6ee7a3; }
+.ci-chip.done { background: rgba(16, 120, 70, .55); border-color: rgba(52, 211, 153, .6); }
+.ci-chip.today { border-color: #fbbf24; box-shadow: 0 0 0 1px #fbbf24 inset; }
+.ci-chip.today b { color: #fde68a; }
